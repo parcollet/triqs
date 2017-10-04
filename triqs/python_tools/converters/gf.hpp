@@ -102,5 +102,40 @@ namespace triqs {
                   convert_from_python<indices_t>(i)};
    }
   };
+  
+
+
+  //  Converter of mesh_point
+  template <typename M> struct py_converter<triqs::gfs::mesh_point<M>> {
+
+   using c_type = triqs::gfs::mesh_point<M>;
+
+   static PyObject* c2py(c_type const & p) {
+
+    pyref cls = pyref::get_class("pytriqs.gf", "MeshPoint", /* raise_exception */ true);
+    if (cls.is_null()) return NULL;
+    
+    pyref val = convert_to_python(static_cast<typename c_type::cast_t>(p));
+    if (val.is_null()) return NULL;
+    
+    //pyref idx   = convert_to_python(p.index());
+    //if (idx.is_null()) return NULL;
+
+    pyref lidx   = convert_to_python(p.linear_index());
+    if (lidx.is_null()) return NULL;
+
+    pyref kw = PyDict_New();
+    pyref args = PyTuple_Pack(2, static_cast<PyObject*>(lidx), static_cast<PyObject*>(val));
+    return PyObject_Call(cls, args, kw);
+ 
+   }
+
+
+
+   //static bool is_convertible(PyObject* ob, bool raise_exception) { }
+   //static c_type py2c(PyObject* ob) { }
+
+
+  };
  }
 }

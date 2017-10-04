@@ -19,6 +19,13 @@
 #
 ################################################################################
 
+class MeshValueGenerator:
+    def __init__(self, m):
+        self.m = m
+
+    def __iter__(self):
+        return (x.value for x in self.m)
+
 class MeshPoint :
 
     def __init__(self, linear_index, value = None):
@@ -74,3 +81,12 @@ class MeshPoint :
 
     def __str__(self):
         return "mesh_point(linear_index = %s, value = %s)"%(self.linear_index, self.value)
+
+    @property
+    def real(self): 
+        return self.value.real
+
+    @property
+    def imag(self): 
+        return self.value.imag
+
