@@ -21,7 +21,6 @@
 #ifndef TRIQS_ARRAYS_NUMPY_EXTRACTOR_H
 #define TRIQS_ARRAYS_NUMPY_EXTRACTOR_H
 
-#include "../storages/shared_block.hpp"
 #include "triqs/utility/macros.hpp"
 #include "triqs/utility/exceptions.hpp"
 #ifdef TRIQS_WITH_PYTHON_SUPPORT
