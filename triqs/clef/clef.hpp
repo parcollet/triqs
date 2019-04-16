@@ -28,6 +28,8 @@
 #include <functional>
 #include <memory>
 #include <complex>
+
+// FIXME : remove BOOST 
 #include <boost/preprocessor/stringize.hpp>
 #include <boost/preprocessor/repetition/repeat_from_to.hpp>
 #include <boost/preprocessor/repetition/enum.hpp>
@@ -38,6 +40,7 @@
 namespace triqs {
   namespace clef {
     using ull_t = unsigned long long;
+    // USE enum ??
     namespace tags {
       struct function_class {};
       struct function {};
@@ -149,6 +152,8 @@ namespace triqs {
       expr &operator=(expr const &) = delete; // no ordinary assignment
       expr &operator=(expr &&) = default;     // move assign ok
       // however, this is ok in the case f(i,j) = expr, where f is a clef::function
+      
+      // FIXME : one template + assert
       template <typename RHS, typename CH = childs_t>
       ENABLE_IF(std::is_base_of<tags::function_class, typename std::tuple_element<0, CH>::type>)
       operator=(RHS const &rhs) {
@@ -274,6 +279,8 @@ namespace triqs {
     // The general eval function for expressions : declaration only
     template <typename T, typename... Pairs> decltype(auto) eval(T const &ex, Pairs const &... pairs);
 
+    // FIXME : move template to function, one function with 3 cases (i=N, i!=N, end case)
+    // USe a pass_throught_t
     // _ph
     template <int N, int i, typename T, typename... Pairs> struct evaluator<_ph<N>, pair<i, T>, Pairs...> {
       using eval_t                  = evaluator<_ph<N>, Pairs...>;
@@ -293,6 +300,8 @@ namespace triqs {
         return eval(x.get(), contexts...);
       }
     };
+
+    // FIXME if constexpr
 
     // Dispatch the operations : depends it the result is a lazy expression
     template <typename Tag, typename... Args> FORCEINLINE expr<Tag, expr_storage_t<Args>...> op_dispatch(std::true_type, Args &&... args) {
@@ -316,6 +325,8 @@ namespace triqs {
         return eval_impl(std14::make_index_sequence<sizeof...(Childs)>(), ex, pairs...);
       }
     };
+
+    // FIXME : using constexpr, only ONE function to evaluate ?
 
     // The general eval function for expressions
     template <typename T, typename... Pairs> FORCEINLINE decltype(auto) eval(T const &ex, Pairs const &... pairs) {
@@ -401,6 +412,7 @@ namespace triqs {
   *  x_ >> expression  is the same as make_function(expression,x)
   * --------------------------------------------------------------------------------------------------- */
 
+    // FIME : REMOVE
     template <int N, typename Expr> make_fun_impl<Expr, N> operator>>(_ph<N> p, Expr &&ex) { return {ex}; }
 
     /* ---------------------------------------------------------------------------------------------------
@@ -555,6 +567,7 @@ namespace triqs {
   * The object can be kept as a : a ref, a copy, a view
   * --------------------------------------------------------------------------------------------------- */
 
+    // FIXME : remove result, use REQUIRE
     namespace _result_of {
       template <typename Obj, typename Arg>
       struct make_expr_subscript : std::enable_if<is_any_lazy<Arg>::value, expr<tags::subscript, expr_storage_t<Obj>, expr_storage_t<Arg>>> {};
@@ -565,6 +578,7 @@ namespace triqs {
 
     template <typename Obj, typename... Args> using make_expr_subscript_t = typename _result_of::make_expr_subscript<Obj, Args...>::type;
 
+    // FIXME : REMOVE THIS !!
     /* --------------------------------------------------------------------------------------------------
   *  function class : stores any expression polymorphically
   *  f(x_,y_ ) = an expression associates this expression dynamically to f, which
