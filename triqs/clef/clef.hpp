@@ -19,19 +19,25 @@
  *
  ******************************************************************************/
 #pragma once
-#include <triqs/utility/first_include.hpp>
-#include <triqs/utility/macros.hpp>
-#include <triqs/utility/tuple_tools.hpp>
-#include <triqs/utility/c14.hpp>
+//#include <triqs/utility/first_include.hpp>
+//#include <triqs/utility/macros.hpp>
+//#include <triqs/utility/tuple_tools.hpp>
+//#include <triqs/utility/c14.hpp>
 #include <tuple>
 #include <type_traits>
 #include <functional>
 #include <memory>
 #include <complex>
-#include <boost/preprocessor/stringize.hpp>
-#include <boost/preprocessor/repetition/repeat_from_to.hpp>
-#include <boost/preprocessor/repetition/enum.hpp>
-#include <boost/preprocessor/arithmetic/inc.hpp>
+//#include <boost/preprocessor/stringize.hpp>
+//#include <boost/preprocessor/repetition/repeat_from_to.hpp>
+//#include <boost/preprocessor/repetition/enum.hpp>
+//#include <boost/preprocessor/arithmetic/inc.hpp>
+
+#define AS_STRING(...) AS_STRING2(__VA_ARGS__)
+#define AS_STRING2(...) #__VA_ARGS__
+
+#define DECL_AND_RETURN(...)                                                                                                                         \
+  ->decltype(__VA_ARGS__) { return __VA_ARGS__; }
 
 #define FORCEINLINE __inline__ __attribute__((always_inline))
 
@@ -101,7 +107,7 @@ namespace triqs {
     template <int N, typename U> struct pair {
       U rhs;
       static constexpr int p = N;
-      using value_type       = std14::decay_t<U>;
+      using value_type       = std::decay_t<U>;
     };
 
     // ph_set is a trait that given a pack of type, returns the set of _phs they contain
@@ -149,14 +155,10 @@ namespace triqs {
       expr &operator=(expr const &) = delete; // no ordinary assignment
       expr &operator=(expr &&) = default;     // move assign ok
       // however, this is ok in the case f(i,j) = expr, where f is a clef::function
-      template <typename RHS, typename CH = childs_t>
-      ENABLE_IF(std::is_base_of<tags::function_class, typename std::tuple_element<0, CH>::type>)
-      operator=(RHS const &rhs) {
+      template <typename RHS, typename CH = childs_t> void operator=(RHS const &rhs) {
+        static_assert(std::is_base_of_v<tags::function_class, std::tuple_element_t<0, CH>>, "= operation not permitted");
         *this << rhs;
       }
-      template <typename RHS, typename CH = childs_t>
-      DISABLE_IF(std::is_base_of<tags::function_class, typename std::tuple_element<0, CH>::type>)
-      operator=(RHS const &rhs) = delete;
     };
     // set some traits
     template <typename Tag, typename... T> struct ph_set<expr<Tag, T...>> : ph_set<T...> {};
@@ -198,11 +200,11 @@ namespace triqs {
 #define TRIQS_CLEF_OPERATION(TAG, OP)                                                                                                                \
   namespace tags {                                                                                                                                   \
     struct TAG : binary_op {                                                                                                                         \
-      static const char *name() { return BOOST_PP_STRINGIZE(OP); }                                                                                   \
+      static const char *name() { return AS_STRING(OP); }                                                                                            \
     };                                                                                                                                               \
   }                                                                                                                                                  \
   template <typename L, typename R>                                                                                                                  \
-  FORCEINLINE std14::enable_if_t<is_any_lazy<L, R>::value, expr<tags::TAG, expr_storage_t<L>, expr_storage_t<R>>> operator OP(L &&l, R &&r) {        \
+  FORCEINLINE std::enable_if_t<is_any_lazy<L, R>::value, expr<tags::TAG, expr_storage_t<L>, expr_storage_t<R>>> operator OP(L &&l, R &&r) {          \
     return {tags::TAG(), std::forward<L>(l), std::forward<R>(r)};                                                                                    \
   }                                                                                                                                                  \
   template <> struct operation<tags::TAG> {                                                                                                          \
@@ -226,10 +228,10 @@ namespace triqs {
 #define TRIQS_CLEF_OPERATION(TAG, OP)                                                                                                                \
   namespace tags {                                                                                                                                   \
     struct TAG : unary_op {                                                                                                                          \
-      static const char *name() { return BOOST_PP_STRINGIZE(OP); }                                                                                   \
+      static const char *name() { return AS_STRING(OP); }                                                                                            \
     };                                                                                                                                               \
   }                                                                                                                                                  \
-  template <typename L> FORCEINLINE std14::enable_if_t<is_any_lazy<L>::value, expr<tags::TAG, expr_storage_t<L>>> operator OP(L &&l) {               \
+  template <typename L> FORCEINLINE std::enable_if_t<is_any_lazy<L>::value, expr<tags::TAG, expr_storage_t<L>>> operator OP(L &&l) {                 \
     return {tags::TAG(), std::forward<L>(l)};                                                                                                        \
   }                                                                                                                                                  \
   template <> struct operation<tags::TAG> {                                                                                                          \
@@ -308,12 +310,12 @@ namespace triqs {
       static constexpr bool is_lazy = __or(evaluator<Childs, Pairs...>::is_lazy...);
 
       template <size_t... Is>
-      FORCEINLINE decltype(auto) eval_impl(std14::index_sequence<Is...>, expr<Tag, Childs...> const &ex, Pairs const &... pairs) const {
+      FORCEINLINE decltype(auto) eval_impl(std::index_sequence<Is...>, expr<Tag, Childs...> const &ex, Pairs const &... pairs) const {
         return op_dispatch<Tag>(std::integral_constant<bool, is_lazy>{}, eval(std::get<Is>(ex.childs), pairs...)...);
       }
 
       FORCEINLINE decltype(auto) operator()(expr<Tag, Childs...> const &ex, Pairs const &... pairs) const {
-        return eval_impl(std14::make_index_sequence<sizeof...(Childs)>(), ex, pairs...);
+        return eval_impl(std::make_index_sequence<sizeof...(Childs)>(), ex, pairs...);
       }
     };
 
@@ -326,15 +328,24 @@ namespace triqs {
  * Apply a function object to all the leaves of the expression tree
  *  --------------------------------------------------------------------------------------------------- */
 
+    /*
+  * for_each(t, f)
+  * t: a tuple
+  * f: a callable object
+  * calls f on all tuple elements in the order of the tuple: f(x) for all x in t
+  */
+    template <typename F, typename T, size_t... Is> void for_each_impl(F &&f, T &&t, std::index_sequence<Is...>) { ((void)f(std::get<Is>(t)), ...); }
+
+    // FIXME : don't we know the size of the tuple ?
+    template <typename T, typename F> void for_each(T &&t, F &&f) {
+      for_each_impl(f, std::forward<T>(t), std::make_index_sequence<std::tuple_size_v<std::decay_t<T>>>{});
+    }
+
     template <typename F> struct apply_on_each_leaf_impl {
       F f;
-      template <typename T> FORCEINLINE std::c14::enable_if_t<is_clef_expression<T>::value> operator()(T const &ex) {
-        tuple::for_each(ex.childs, *this);
-      }
-      template <typename T> FORCEINLINE std::c14::enable_if_t<!is_clef_expression<T>::value> operator()(T const &x) { f(x); }
-      template <typename T> FORCEINLINE std::c14::enable_if_t<!is_clef_expression<T>::value> operator()(std::reference_wrapper<T> const &x) {
-        f(x.get());
-      }
+      template <typename T> FORCEINLINE std::enable_if_t<is_clef_expression<T>::value> operator()(T const &ex) { triqs::clef::for_each(ex.childs, *this); }
+      template <typename T> FORCEINLINE std::enable_if_t<!is_clef_expression<T>::value> operator()(T const &x) { f(x); }
+      template <typename T> FORCEINLINE std::enable_if_t<!is_clef_expression<T>::value> operator()(std::reference_wrapper<T> const &x) { f(x.get()); }
     };
 
     template <typename F, typename Expr> FORCEINLINE void apply_on_each_leaf(F &&f, Expr const &ex) {
@@ -370,13 +381,13 @@ namespace triqs {
     template <typename Expr, int... Is> struct force_copy_in_expr<make_fun_impl<Expr, Is...>> : std::true_type {};
 
     template <typename Expr, typename... Phs>
-    FORCEINLINE make_fun_impl<typename remove_cv_ref<Expr>::type, Phs::index...> make_function(Expr &&ex, Phs...) {
+    FORCEINLINE make_fun_impl<std::decay_t<Expr>, Phs::index...> make_function(Expr &&ex, Phs...) {
       return {std::forward<Expr>(ex)};
     }
 
     namespace result_of {
       template <typename Expr, typename... Phs> struct make_function {
-        using type = make_fun_impl<typename remove_cv_ref<Expr>::type, Phs::index...>;
+        using type = make_fun_impl<std::decay_t<Expr>, Phs::index...>;
       };
     } // namespace result_of
 
@@ -527,7 +538,7 @@ namespace triqs {
     template <typename T> expr<tags::terminal, expr_storage_t<T>> make_expr(T &&x) { return {tags::terminal(), std::forward<T>(x)}; }
 
     // make a node from a copy of the object
-    template <typename T> expr<tags::terminal, typename remove_cv_ref<T>::type> make_expr_from_clone(T &&x) {
+    template <typename T> expr<tags::terminal, std::decay_t<T>> make_expr_from_clone(T &&x) {
       return {tags::terminal(), std::forward<T>(x)};
     }
 
@@ -607,7 +618,7 @@ namespace triqs {
   template <typename... A> auto name(A &&... a) DECL_AND_RETURN(make_expr_call(name##_lazy_impl(), std::forward<A>(a)...));
 
 #define TRIQS_CLEF_EXTEND_FNT_LAZY(FUN, TRAIT)                                                                                                       \
-  template <typename A> std::c14::enable_if_t<TRAIT<A>::value, clef::expr_node_t<clef::tags::function, clef::FUN##_lazy_impl, A>> FUN(A &&a) {       \
+  template <typename A> std::enable_if_t<TRAIT<A>::value, clef::expr_node_t<clef::tags::function, clef::FUN##_lazy_impl, A>> FUN(A &&a) {            \
     return {clef::tags::function{}, clef::FUN##_lazy_impl{}, std::forward<A>(a)};                                                                    \
   }
 
@@ -615,7 +626,7 @@ namespace triqs {
   struct __clef_lazy_method_impl_##TY##_##name {                                                                                                     \
     template <typename X, typename... A> decltype(auto) operator()(X &&x, A &&... a) const { return x.name(std::forward<A>(a)...); }                 \
     friend std::ostream &operator<<(std::ostream &out, __clef_lazy_method_impl_##TY##_##name const &x) {                                             \
-      return out << "apply_method:" << BOOST_PP_STRINGIZE(name);                                                                                     \
+      return out << "apply_method:" << AS_STRING(name);                                                                                              \
     }                                                                                                                                                \
   };                                                                                                                                                 \
   template <typename... A>                                                                                                                           \

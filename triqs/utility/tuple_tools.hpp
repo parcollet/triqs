@@ -23,7 +23,7 @@
 #include "./c14.hpp"
 #include <tuple>
 #include <ostream>
-#include "./mini_vector.hpp"
+//#include "./mini_vector.hpp"
 
 // Implementation of a generic zip of N tuple-like objects (requires only std::get to be overloaded)
 namespace triqs {
@@ -161,6 +161,8 @@ namespace triqs {
 
     template <typename F> _called_on_tuple<F> called_on_tuple(F &&f) { return {std::forward<F>(f)}; }
 
+
+    // FIXME : rewrite with folding
     // Implementation tools
     // _for_each_impl (f, x0, x1, ..., xn) calls f(x0); f(x1); ... f(xn); IN THIS ORDER
     template <typename F> void _for_each_impl(F &&f) {}

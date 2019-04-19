@@ -21,7 +21,12 @@
 #pragma once
 #include "./functional/fold.hpp"
 #include <algorithm>
+
+#include <boost/preprocessor/stringize.hpp>
 #include <boost/preprocessor/repetition/repeat_from_to.hpp>
+#include <boost/preprocessor/repetition/enum.hpp>
+#include <boost/preprocessor/arithmetic/inc.hpp>
+
 #include <functional>
 #include <triqs/utility/first_include.hpp>
 

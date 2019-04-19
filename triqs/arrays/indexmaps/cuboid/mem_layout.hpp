@@ -19,6 +19,9 @@
  *
  ******************************************************************************/
 #pragma once
+#include <triqs/utility/macros.hpp>
+#include <triqs/utility/mini_vector.hpp>
+
 namespace triqs {
   namespace arrays {
 
