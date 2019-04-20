@@ -89,12 +89,14 @@ namespace triqs {
     }
 
     // tuple_com can be evaluated
-    template <typename... T, typename... Contexts> 
-      FORCEINLINE decltype(auto) eval(gfs::tuple_com<T...> const &tu, Contexts const &... contexts) {
-       auto l  = [&contexts...](auto &&y) -> decltype(auto) { return eval(y, contexts...); };
+    template <typename... T, typename... Contexts> struct evaluator<gfs::tuple_com<T...>, Contexts...> {
+      static constexpr bool is_lazy = false;
+      FORCEINLINE decltype(auto) operator()(gfs::tuple_com<T...> const &tu, Contexts const &... contexts) const {
+        auto l  = [&contexts...](auto &&y) -> decltype(auto) { return eval(y, contexts...); };
         auto _t = triqs::tuple::map(l, tu._t);
         return triqs::gfs::make_tuple_com_from_tuple(std::move(_t));
       }
+    };
 
   } // namespace clef
 } // namespace triqs
