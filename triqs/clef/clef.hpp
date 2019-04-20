@@ -273,16 +273,9 @@ namespace triqs {
   *  --------------------------------------------------------------------------------------------------- */
 #define OLD_EVALUATOR 
 #ifdef OLD_EVALUATOR 
-    //FIXME C++17 : replace by fold
-    constexpr bool __or() { return false; }
-    template <typename... B> constexpr bool __or(bool b, B... bs) { return b || __or(bs...); }
-
-    constexpr bool __and() { return true; }
-    template <typename... B> constexpr bool __and(bool b, B... bs) { return b && __and(bs...); }
-
-    // Generic case : do nothing (for the leaf of the tree including _ph)
+      // Generic case : do nothing (for the leaf of the tree including _ph)
     template <typename T, typename... Pairs> struct evaluator {
-      static constexpr bool is_lazy = is_any_lazy<T>::value;
+      //static constexpr bool is_lazy = is_any_lazy<T>::value;
       FORCEINLINE T const &operator()(T const &k, Pairs const &... pairs) const { return k; }
     };
 
@@ -292,39 +285,40 @@ namespace triqs {
     // _ph
     template <int N, int i, typename T, typename... Pairs> struct evaluator<_ph<N>, pair<i, T>, Pairs...> {
       using eval_t                  = evaluator<_ph<N>, Pairs...>;
-      static constexpr bool is_lazy = eval_t::is_lazy;
+      //static constexpr bool is_lazy = eval_t::is_lazy;
       FORCEINLINE decltype(auto) operator()(_ph<N>, pair<i, T> const &, Pairs const &... pairs) const { return eval_t()(_ph<N>(), pairs...); }
     };
 
     template <int N, typename T, typename... Pairs> struct evaluator<_ph<N>, pair<N, T>, Pairs...> {
-      static constexpr bool is_lazy = false;
+      //static constexpr bool is_lazy = false;
       FORCEINLINE T operator()(_ph<N>, pair<N, T> const &p, Pairs const &...) const { return p.rhs; }
     };
 
     // any object hold by reference wrapper is redirected to the evaluator of the object
     template <typename T, typename... Contexts> struct evaluator<std::reference_wrapper<T>, Contexts...> {
-      static constexpr bool is_lazy = false;
+      //static constexpr bool is_lazy = false;
       FORCEINLINE decltype(auto) operator()(std::reference_wrapper<T> const &x, Contexts const &... contexts) const {
         return eval(x.get(), contexts...);
       }
     };
 
     // Dispatch the operations : depends it the result is a lazy expression
-    template <typename Tag, typename... Args> FORCEINLINE expr<Tag, expr_storage_t<Args>...> op_dispatch(std::true_type, Args &&... args) {
-      return {Tag(), std::forward<Args>(args)...};
-    }
+    //template <typename Tag, typename... Args> FORCEINLINE expr<Tag, expr_storage_t<Args>...> op_dispatch(std::true_type, Args &&... args) {
+      //return {Tag(), std::forward<Args>(args)...};
+    //}
 
-    template <typename Tag, typename... Args> FORCEINLINE decltype(auto) op_dispatch(std::false_type, Args &&... args) {
-      return operation<Tag>()(std::forward<Args>(args)...);
-    }
+    //template <typename Tag, typename... Args> FORCEINLINE decltype(auto) op_dispatch(std::false_type, Args &&... args) {
+      //return operation<Tag>()(std::forward<Args>(args)...);
+    //}
 
     // the evaluator for an expression
     template <typename Tag, typename... Childs, typename... Pairs> struct evaluator<expr<Tag, Childs...>, Pairs...> {
-      static constexpr bool is_lazy = __or(evaluator<Childs, Pairs...>::is_lazy...);
+      //static constexpr bool is_lazy = (evaluator<Childs, Pairs...>::is_lazy or ...);
 
       template <size_t... Is>
       FORCEINLINE decltype(auto) eval_impl(std::index_sequence<Is...>, expr<Tag, Childs...> const &ex, Pairs const &... pairs) const {
-        return op_dispatch<Tag>(std::integral_constant<bool, is_lazy>{}, eval(std::get<Is>(ex.childs), pairs...)...);
+        //return op_dispatch<Tag>(std::integral_constant<bool, is_lazy>{}, eval(std::get<Is>(ex.childs), pairs...)...);
+        return operation<Tag>()(eval(std::get<Is>(ex.childs), pairs...)...);
       }
 
       FORCEINLINE decltype(auto) operator()(expr<Tag, Childs...> const &ex, Pairs const &... pairs) const {
@@ -354,7 +348,7 @@ namespace triqs {
     template <int N, typename U, typename T> FORCEINLINE decltype(auto) operator|(pair<N, U> const &, T &&x) { return std::forward<T>(x); }
 
     // placeholder
-    template <int N, typename... Pairs> FORCEINLINE decltype(auto) eval(_ph<N> p, Pairs const &... pairs) { return (pairs | ... | p); }
+    template <int N, typename... Pairs> FORCEINLINE decltype(auto) eval(_ph<N> const &p, Pairs const &... pairs) { return (pairs | ... | p); }
 
     // Expression : realize it
     template <typename Tag, typename... Childs, typename... Pairs, size_t... Is>
@@ -394,7 +388,9 @@ namespace triqs {
 
     template <typename F> struct apply_on_each_leaf_impl {
       F f;
-      template <typename T> FORCEINLINE std::enable_if_t<is_clef_expression<T>::value> operator()(T const &ex) { triqs::clef::for_each(ex.childs, *this); }
+      template <typename T> FORCEINLINE std::enable_if_t<is_clef_expression<T>::value> operator()(T const &ex) {
+        triqs::clef::for_each(ex.childs, *this);
+      }
       template <typename T> FORCEINLINE std::enable_if_t<!is_clef_expression<T>::value> operator()(T const &x) { f(x); }
       template <typename T> FORCEINLINE std::enable_if_t<!is_clef_expression<T>::value> operator()(std::reference_wrapper<T> const &x) { f(x.get()); }
     };
@@ -413,7 +409,11 @@ namespace triqs {
       //make_fun_impl(Expr const & ex_) : ex(ex_) {}
 
       template <typename... Args> FORCEINLINE decltype(auto) operator()(Args &&... args) const {
+#ifdef OLD_EVALUATOR
         return evaluator<Expr, pair<Is, Args>...>()(ex, pair<Is, Args>{std::forward<Args>(args)}...);
+#else
+	return eval(ex, pair<Is, Args>{std::forward<Args>(args)}...);
+#endif
       }
     };
 
@@ -431,17 +431,15 @@ namespace triqs {
     struct is_any_lazy<make_fun_impl<Expr, Is...>> : std::integral_constant<bool, ph_set<make_fun_impl<Expr, Is...>>::value != 0> {};
     template <typename Expr, int... Is> struct force_copy_in_expr<make_fun_impl<Expr, Is...>> : std::true_type {};
 
-    template <typename Expr, typename... Phs>
-    FORCEINLINE make_fun_impl<std::decay_t<Expr>, Phs::index...> make_function(Expr &&ex, Phs...) {
+    template <typename Expr, typename... Phs> FORCEINLINE make_fun_impl<std::decay_t<Expr>, Phs::index...> make_function(Expr &&ex, Phs...) {
       return {std::forward<Expr>(ex)};
     }
 
     namespace result_of {
-      template <typename Expr, typename... Phs> struct make_function {
-        using type = make_fun_impl<std::decay_t<Expr>, Phs::index...>;
-      };
+      template <typename Expr, typename... Phs> struct make_function { using type = make_fun_impl<std::decay_t<Expr>, Phs::index...>; };
     } // namespace result_of
 
+#ifdef OLD_EVALUATOR
     template <typename Expr, int... Is, typename... Pairs> struct evaluator<make_fun_impl<Expr, Is...>, Pairs...> {
       using e_t                     = evaluator<Expr, Pairs...>;
       static constexpr bool is_lazy = (ph_set<make_fun_impl<Expr, Is...>>::value != ph_set<Pairs...>::value);
@@ -449,6 +447,12 @@ namespace triqs {
         return make_function(e_t()(f.ex, pairs...), _ph<Is>()...);
       }
     };
+#else
+
+    template <typename Expr, int... Is, typename... Pairs> FORCEINLINE decltype(auto) eval(make_fun_impl<Expr, Is...> const &f, Pairs const &... pairs){
+        return make_function(eval(f.ex, pairs...), _ph<Is>()...);
+      }
+#endif
 
     template <int... N> struct ph_list {};
     template <int... N> ph_list<N...> var(_ph<N>...) { return {}; }

@@ -2,7 +2,7 @@
 
 namespace tql = triqs::clef;
 // This macro just prints its argument literaly, and then its value
-#define PRINT(X) std::cout << BOOST_PP_STRINGIZE((X)) << " ---> " << (X) << std::endl;
+#define PRINT(X) std::cout << AS_STRING((X)) << " ---> " << (X) << std::endl;
 
 int main() {
 
