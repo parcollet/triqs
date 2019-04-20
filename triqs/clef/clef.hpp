@@ -394,7 +394,9 @@ namespace triqs {
 
     template <typename F> struct apply_on_each_leaf_impl {
       F f;
-      template <typename T> FORCEINLINE std::enable_if_t<is_clef_expression<T>::value> operator()(T const &ex) { triqs::clef::for_each(ex.childs, *this); }
+      template <typename T> FORCEINLINE std::enable_if_t<is_clef_expression<T>::value> operator()(T const &ex) {
+        triqs::clef::for_each(ex.childs, *this);
+      }
       template <typename T> FORCEINLINE std::enable_if_t<!is_clef_expression<T>::value> operator()(T const &x) { f(x); }
       template <typename T> FORCEINLINE std::enable_if_t<!is_clef_expression<T>::value> operator()(std::reference_wrapper<T> const &x) { f(x.get()); }
     };
@@ -413,7 +415,8 @@ namespace triqs {
       //make_fun_impl(Expr const & ex_) : ex(ex_) {}
 
       template <typename... Args> FORCEINLINE decltype(auto) operator()(Args &&... args) const {
-        return evaluator<Expr, pair<Is, Args>...>()(ex, pair<Is, Args>{std::forward<Args>(args)}...);
+        return eval(ex, pair<Is, Args>{std::forward<Args>(args)}...);
+        //return evaluator<Expr, pair<Is, Args>...>()(ex, pair<Is, Args>{std::forward<Args>(args)}...);
       }
     };
 
@@ -431,24 +434,26 @@ namespace triqs {
     struct is_any_lazy<make_fun_impl<Expr, Is...>> : std::integral_constant<bool, ph_set<make_fun_impl<Expr, Is...>>::value != 0> {};
     template <typename Expr, int... Is> struct force_copy_in_expr<make_fun_impl<Expr, Is...>> : std::true_type {};
 
-    template <typename Expr, typename... Phs>
-    FORCEINLINE make_fun_impl<std::decay_t<Expr>, Phs::index...> make_function(Expr &&ex, Phs...) {
+    template <typename Expr, typename... Phs> FORCEINLINE make_fun_impl<std::decay_t<Expr>, Phs::index...> make_function(Expr &&ex, Phs...) {
       return {std::forward<Expr>(ex)};
     }
 
     namespace result_of {
-      template <typename Expr, typename... Phs> struct make_function {
-        using type = make_fun_impl<std::decay_t<Expr>, Phs::index...>;
-      };
+      template <typename Expr, typename... Phs> struct make_function { using type = make_fun_impl<std::decay_t<Expr>, Phs::index...>; };
     } // namespace result_of
 
-    template <typename Expr, int... Is, typename... Pairs> struct evaluator<make_fun_impl<Expr, Is...>, Pairs...> {
+    /*template <typename Expr, int... Is, typename... Pairs> struct evaluator<make_fun_impl<Expr, Is...>, Pairs...> {
       using e_t                     = evaluator<Expr, Pairs...>;
       static constexpr bool is_lazy = (ph_set<make_fun_impl<Expr, Is...>>::value != ph_set<Pairs...>::value);
       FORCEINLINE decltype(auto) operator()(make_fun_impl<Expr, Is...> const &f, Pairs const &... pairs) const {
         return make_function(e_t()(f.ex, pairs...), _ph<Is>()...);
       }
     };
+    */
+
+    template <typename Expr, int... Is, typename... Pairs> FORCEINLINE decltype(auto) eval(make_fun_impl<Expr, Is...> const &f, Pairs const &... pairs){
+        return make_function(eval(f.ex, pairs...), _ph<Is>()...);
+      }
 
     template <int... N> struct ph_list {};
     template <int... N> ph_list<N...> var(_ph<N>...) { return {}; }
