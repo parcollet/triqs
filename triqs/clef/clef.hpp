@@ -33,6 +33,9 @@
 //#include <boost/preprocessor/repetition/enum.hpp>
 //#include <boost/preprocessor/arithmetic/inc.hpp>
 
+// FIXXME
+#include <iostream>
+
 #define AS_STRING(...) AS_STRING2(__VA_ARGS__)
 #define AS_STRING2(...) #__VA_ARGS__
 
@@ -81,8 +84,10 @@ namespace triqs {
     template <int i, typename T> struct pair;           // forward
     template <typename Tag, typename... T> struct expr; //forward
 
+    struct ph_tag {};
+
     // a placeholder is an empty struct, labelled by an int.
-    template <int N> struct _ph {
+    template <int N> struct _ph : ph_tag {
       //static_assert( (N>=0) && (N<64) , "Placeholder number limited to [0,63]");
       static_assert((N >= 0), "Invalid placeholder range. Placeholder parameters is to [0,15] for each type of placeholder.");
       static constexpr int index                   = N;
@@ -215,9 +220,8 @@ namespace triqs {
       static const char *name() { return AS_STRING(OP); }                                                                                            \
     };                                                                                                                                               \
   }                                                                                                                                                  \
-  template <typename L, typename R>                                                                                                                  \
-  FORCEINLINE std::enable_if_t<is_any_lazy<L, R>::value, expr<tags::TAG, expr_storage_t<L>, expr_storage_t<R>>> operator OP(L &&l, R &&r) {          \
-    return {tags::TAG(), std::forward<L>(l), std::forward<R>(r)};                                                                                    \
+  template <typename L, typename R> FORCEINLINE auto operator OP(L &&l, R &&r) REQUIRES(is_any_lazy<R>::value or is_any_lazy<L>::value) {            \
+    return expr<tags::TAG, expr_storage_t<L>, expr_storage_t<R>>{tags::TAG(), std::forward<L>(l), std::forward<R>(r)};                               \
   }                                                                                                                                                  \
   template <> struct operation<tags::TAG> {                                                                                                          \
     template <typename L, typename R> FORCEINLINE decltype(auto) operator()(L &&l, R &&r) const {                                                    \
@@ -271,11 +275,10 @@ namespace triqs {
     /* ---------------------------------------------------------------------------------------------------
   * Evaluation of the expression tree.
   *  --------------------------------------------------------------------------------------------------- */
-#define OLD_EVALUATOR 
-#ifdef OLD_EVALUATOR 
-      // Generic case : do nothing (for the leaf of the tree including _ph)
+//#define OLD_EVALUATOR
+#ifdef OLD_EVALUATOR
+    // Generic case : do nothing (for the leaf of the tree including _ph)
     template <typename T, typename... Pairs> struct evaluator {
-      //static constexpr bool is_lazy = is_any_lazy<T>::value;
       FORCEINLINE T const &operator()(T const &k, Pairs const &... pairs) const { return k; }
     };
 
@@ -284,40 +287,26 @@ namespace triqs {
 
     // _ph
     template <int N, int i, typename T, typename... Pairs> struct evaluator<_ph<N>, pair<i, T>, Pairs...> {
-      using eval_t                  = evaluator<_ph<N>, Pairs...>;
-      //static constexpr bool is_lazy = eval_t::is_lazy;
+      using eval_t = evaluator<_ph<N>, Pairs...>;
       FORCEINLINE decltype(auto) operator()(_ph<N>, pair<i, T> const &, Pairs const &... pairs) const { return eval_t()(_ph<N>(), pairs...); }
     };
 
     template <int N, typename T, typename... Pairs> struct evaluator<_ph<N>, pair<N, T>, Pairs...> {
-      //static constexpr bool is_lazy = false;
       FORCEINLINE T operator()(_ph<N>, pair<N, T> const &p, Pairs const &...) const { return p.rhs; }
     };
 
     // any object hold by reference wrapper is redirected to the evaluator of the object
     template <typename T, typename... Contexts> struct evaluator<std::reference_wrapper<T>, Contexts...> {
-      //static constexpr bool is_lazy = false;
       FORCEINLINE decltype(auto) operator()(std::reference_wrapper<T> const &x, Contexts const &... contexts) const {
         return eval(x.get(), contexts...);
       }
     };
 
-    // Dispatch the operations : depends it the result is a lazy expression
-    //template <typename Tag, typename... Args> FORCEINLINE expr<Tag, expr_storage_t<Args>...> op_dispatch(std::true_type, Args &&... args) {
-      //return {Tag(), std::forward<Args>(args)...};
-    //}
-
-    //template <typename Tag, typename... Args> FORCEINLINE decltype(auto) op_dispatch(std::false_type, Args &&... args) {
-      //return operation<Tag>()(std::forward<Args>(args)...);
-    //}
-
     // the evaluator for an expression
     template <typename Tag, typename... Childs, typename... Pairs> struct evaluator<expr<Tag, Childs...>, Pairs...> {
-      //static constexpr bool is_lazy = (evaluator<Childs, Pairs...>::is_lazy or ...);
 
       template <size_t... Is>
       FORCEINLINE decltype(auto) eval_impl(std::index_sequence<Is...>, expr<Tag, Childs...> const &ex, Pairs const &... pairs) const {
-        //return op_dispatch<Tag>(std::integral_constant<bool, is_lazy>{}, eval(std::get<Is>(ex.childs), pairs...)...);
         return operation<Tag>()(eval(std::get<Is>(ex.childs), pairs...)...);
       }
 
@@ -333,26 +322,25 @@ namespace triqs {
 
 #else
 
-    // general : do nothing 
+    // general : do nothing
     template <typename T, typename... Pairs> FORCEINLINE decltype(auto) eval(T const &ex, Pairs const &... pairs) { return ex; }
 
-    // pair | ph -> pair.rhs
-    template <int N, typename U, int J> FORCEINLINE decltype(auto) operator|(pair<N, U> const &x, _ph<J> const &pl) {
-      if constexpr (J == N)
-        return x.rhs;
+    template <int N, typename... T, int... Js, size_t... Is>
+    FORCEINLINE decltype(auto) eval_impl_ph(std::index_sequence<Is...>, _ph<N> const &p, std::tuple<pair<Js, T> const &...> pairs) {
+      static constexpr int pos = ((Js == N ? int(Is) + 1 : 0) + ...) - 1;
+      if constexpr (pos == -1)
+        return _ph<N>{};
       else
-        return pl;
+        return std::get<pos>(pairs).rhs;
     }
 
-    //  pair | x -> x generic case
-    template <int N, typename U, typename T> FORCEINLINE decltype(auto) operator|(pair<N, U> const &, T &&x) { return std::forward<T>(x); }
-
-    // placeholder
-    template <int N, typename... Pairs> FORCEINLINE decltype(auto) eval(_ph<N> const &p, Pairs const &... pairs) { return (pairs | ... | p); }
+    template <int N, typename... Pairs> FORCEINLINE decltype(auto) eval(_ph<N> const &p, Pairs const &... pairs) {
+      return eval_impl_ph(std::index_sequence_for<Pairs...>{}, p, std::tie(pairs...));
+    }
 
     // Expression : realize it
     template <typename Tag, typename... Childs, typename... Pairs, size_t... Is>
-    FORCEINLINE decltype(auto) eval_impl( std::index_sequence<Is...>, expr<Tag, Childs...> const &ex, Pairs const &... pairs) {
+    FORCEINLINE decltype(auto) eval_impl(std::index_sequence<Is...>, expr<Tag, Childs...> const &ex, Pairs const &... pairs) {
       // REPLACE OPERATIN TA<
       // if constexpr (tag==Tag::plus) operator+(....);
       return operation<Tag>()(eval(std::get<Is>(ex.childs), pairs...)...);
@@ -412,7 +400,7 @@ namespace triqs {
 #ifdef OLD_EVALUATOR
         return evaluator<Expr, pair<Is, Args>...>()(ex, pair<Is, Args>{std::forward<Args>(args)}...);
 #else
-	return eval(ex, pair<Is, Args>{std::forward<Args>(args)}...);
+        return eval(ex, pair<Is, Args>{std::forward<Args>(args)}...);
 #endif
       }
     };
@@ -449,9 +437,10 @@ namespace triqs {
     };
 #else
 
-    template <typename Expr, int... Is, typename... Pairs> FORCEINLINE decltype(auto) eval(make_fun_impl<Expr, Is...> const &f, Pairs const &... pairs){
-        return make_function(eval(f.ex, pairs...), _ph<Is>()...);
-      }
+    template <typename Expr, int... Is, typename... Pairs>
+    FORCEINLINE decltype(auto) eval(make_fun_impl<Expr, Is...> const &f, Pairs const &... pairs) {
+      return make_function(eval(f.ex, pairs...), _ph<Is>()...);
+    }
 #endif
 
     template <int... N> struct ph_list {};
@@ -593,9 +582,7 @@ namespace triqs {
     template <typename T> expr<tags::terminal, expr_storage_t<T>> make_expr(T &&x) { return {tags::terminal(), std::forward<T>(x)}; }
 
     // make a node from a copy of the object
-    template <typename T> expr<tags::terminal, std::decay_t<T>> make_expr_from_clone(T &&x) {
-      return {tags::terminal(), std::forward<T>(x)};
-    }
+    template <typename T> expr<tags::terminal, std::decay_t<T>> make_expr_from_clone(T &&x) { return {tags::terminal(), std::forward<T>(x)}; }
 
     /* --------------------------------------------------------------------------------------------------
   * Create a call node of an object
