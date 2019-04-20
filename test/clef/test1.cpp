@@ -23,7 +23,7 @@ struct F1 {
   friend std::ostream &operator<<(std::ostream &out, F1 const &x) { return out << "F1"; }
 };
 
-#define TEST(X) std::cout << BOOST_PP_STRINGIZE((X)) << " ---> " << (X) << std::endl;
+#define TEST(X) std::cout << AS_STRING((X)) << " ---> " << (X) << std::endl;
 double x = 1, y = 2;
 
 template <typename Expr> void test1(Expr expr) {

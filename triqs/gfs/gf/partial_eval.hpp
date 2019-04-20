@@ -81,7 +81,7 @@ namespace triqs::gfs {
     }
     template <typename Mesh, typename... A> struct is_ok { static constexpr bool value = is_ok1<Mesh, std::decay_t<A>...>(); };
     template <typename... T, typename... A> struct is_ok<gf_mesh<cartesian_product<T...>>, A...> {
-      static constexpr bool value = clef::__and(is_ok1<gf_mesh<T>, std::decay_t<A>>()...);
+      static constexpr bool value = (is_ok1<gf_mesh<T>, std::decay_t<A>>() and...);
     };
 
     ///

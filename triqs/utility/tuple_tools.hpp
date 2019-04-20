@@ -23,7 +23,7 @@
 #include "./c14.hpp"
 #include <tuple>
 #include <ostream>
-//#include "./mini_vector.hpp"
+#include "./mini_vector.hpp"
 
 // Implementation of a generic zip of N tuple-like objects (requires only std::get to be overloaded)
 namespace triqs {

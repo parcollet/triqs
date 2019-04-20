@@ -36,6 +36,12 @@
 #define AS_STRING(...) AS_STRING2(__VA_ARGS__)
 #define AS_STRING2(...) #__VA_ARGS__
 
+#ifdef __clang__
+#define REQUIRES(...) __attribute__((enable_if(__VA_ARGS__, AS_STRING(__VA_ARGS__))))
+#elif __GNUC__
+#define REQUIRES(...) requires(__VA_ARGS__)
+#endif
+
 #define DECL_AND_RETURN(...)                                                                                                                         \
   ->decltype(__VA_ARGS__) { return __VA_ARGS__; }
 
@@ -119,6 +125,9 @@ namespace triqs {
     template <int i, typename T> struct ph_set<pair<i, T>> : ph_set<_ph<i>> {};
 
     // in_any_lazy : trait to detect if any of Args is a lazy expression
+
+    // FIXME
+
     template <typename... Args> struct is_any_lazy : std::false_type {};
     template <int N> struct is_any_lazy<_ph<N>> : std::true_type {};
     template <typename T> struct is_any_lazy<T> : std::false_type {};
@@ -128,9 +137,12 @@ namespace triqs {
     template <typename T, typename... Args>
     struct is_any_lazy<T, Args...> : std::integral_constant<bool, is_any_lazy<T>::value || is_any_lazy<Args...>::value> {};
 
-    template <typename T> constexpr bool ClefExpression() { return is_any_lazy<T>::value; }
+    template <typename T> constexpr bool _ClefExpression() { return is_any_lazy<T>::value; }
 
+    // FIXME : reclaim this as a
     template <typename T> struct is_clef_expression : is_any_lazy<T> {};
+
+    // (is_clef_expression_v <T> or ...)
 
     /* ---------------------------------------------------------------------------------------------------
   * Node of the expression tree
@@ -259,7 +271,8 @@ namespace triqs {
     /* ---------------------------------------------------------------------------------------------------
   * Evaluation of the expression tree.
   *  --------------------------------------------------------------------------------------------------- */
-
+#define OLD_EVALUATOR 
+#ifdef OLD_EVALUATOR 
     //FIXME C++17 : replace by fold
     constexpr bool __or() { return false; }
     template <typename... B> constexpr bool __or(bool b, B... bs) { return b || __or(bs...); }
@@ -324,8 +337,46 @@ namespace triqs {
       return evaluator<T, Pairs...>()(ex, pairs...);
     }
 
+#else
+
+    // general : do nothing 
+    template <typename T, typename... Pairs> FORCEINLINE decltype(auto) eval(T const &ex, Pairs const &... pairs) { return ex; }
+
+    // pair | ph -> pair.rhs
+    template <int N, typename U, int J> FORCEINLINE decltype(auto) operator|(pair<N, U> const &x, _ph<J> const &pl) {
+      if constexpr (J == N)
+        return x.rhs;
+      else
+        return pl;
+    }
+
+    //  pair | x -> x generic case
+    template <int N, typename U, typename T> FORCEINLINE decltype(auto) operator|(pair<N, U> const &, T &&x) { return std::forward<T>(x); }
+
+    // placeholder
+    template <int N, typename... Pairs> FORCEINLINE decltype(auto) eval(_ph<N> p, Pairs const &... pairs) { return (pairs | ... | p); }
+
+    // Expression : realize it
+    template <typename Tag, typename... Childs, typename... Pairs, size_t... Is>
+    FORCEINLINE decltype(auto) eval_impl( std::index_sequence<Is...>, expr<Tag, Childs...> const &ex, Pairs const &... pairs) {
+      // REPLACE OPERATIN TA<
+      // if constexpr (tag==Tag::plus) operator+(....);
+      return operation<Tag>()(eval(std::get<Is>(ex.childs), pairs...)...);
+    }
+
+    template <typename Tag, typename... Childs, typename... Pairs>
+    FORCEINLINE decltype(auto) eval(expr<Tag, Childs...> const &ex, Pairs const &... pairs) {
+      return eval_impl(std::make_index_sequence<sizeof...(Childs)>(), ex, pairs...);
+    }
+
+    // any object hold by reference wrapper is redirected to the evaluator of the object
+    template <typename T, typename... Pairs> FORCEINLINE decltype(auto) eval(std::reference_wrapper<T> const &x, Pairs const &... pairs) {
+      return eval(x.get(), pairs...);
+    }
+#endif
+
     /* ---------------------------------------------------------------------------------------------------
- * Apply a function object to all the leaves of the expression tree
+     * Apply a function object to all the leaves of the expression tree
  *  --------------------------------------------------------------------------------------------------- */
 
     /*

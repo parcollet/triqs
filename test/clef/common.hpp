@@ -1,6 +1,6 @@
 #include <triqs/clef/clef.hpp>
 #include <triqs/clef/io.hpp>
-#define TEST(X) std::cout << BOOST_PP_STRINGIZE((X)) << " ---> " << (X) << std::endl;
+#define TEST(X) std::cout << AS_STRING((X)) << " ---> " << (X) << std::endl;
 
 struct F1 {
   double v;
