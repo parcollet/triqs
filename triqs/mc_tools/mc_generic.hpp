@@ -39,6 +39,7 @@ namespace triqs::mc_tools {
   * TBR
   * @include triqs/mc_tools.hpp
   */
+  /// feiofmowemfoiewfoi
   template <typename MCSignType> class mc_generic {
 
 #ifdef TRIQS_MCTOOLS_DEBUG

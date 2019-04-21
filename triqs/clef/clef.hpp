@@ -275,7 +275,7 @@ namespace triqs {
     /* ---------------------------------------------------------------------------------------------------
   * Evaluation of the expression tree.
   *  --------------------------------------------------------------------------------------------------- */
-//#define OLD_EVALUATOR
+#define OLD_EVALUATOR
 #ifdef OLD_EVALUATOR
     // Generic case : do nothing (for the leaf of the tree including _ph)
     template <typename T, typename... Pairs> struct evaluator {
