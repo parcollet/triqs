@@ -1,0 +1,5 @@
+
+- do not compile numpy_extractor if not python : 
+- we should split : libtriqs_python.a or .so...
+
+
