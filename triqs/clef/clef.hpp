@@ -285,6 +285,9 @@ namespace triqs {
     // The general eval function for expressions : declaration only
     template <typename T, typename... Pairs> decltype(auto) eval(T const &ex, Pairs const &... pairs);
 
+#define OLD_EVALUATOR_V1
+#ifdef OLD_EVALUATOR_V1
+
     // _ph
     template <int N, int i, typename T, typename... Pairs> struct evaluator<_ph<N>, pair<i, T>, Pairs...> {
       using eval_t = evaluator<_ph<N>, Pairs...>;
@@ -294,6 +297,25 @@ namespace triqs {
     template <int N, typename T, typename... Pairs> struct evaluator<_ph<N>, pair<N, T>, Pairs...> {
       FORCEINLINE T operator()(_ph<N>, pair<N, T> const &p, Pairs const &...) const { return p.rhs; }
     };
+
+#else
+
+    template <int N, typename... Pairs> struct evaluator<_ph<N>, Pairs...> {
+
+      template <typename... T, int... Js, size_t... Is>
+      static FORCEINLINE decltype(auto) eval_impl_ph(std::index_sequence<Is...>, _ph<N> const &p, std::tuple<pair<Js, T> const &...> pairs) {
+        static constexpr int pos = ((Js == N ? int(Is) + 1 : 0) + ...) - 1;
+        if constexpr (pos == -1)
+          return _ph<N>{};
+        else
+          return std::get<pos>(pairs).rhs;
+      }
+
+      FORCEINLINE decltype(auto) operator()(_ph<N> p, Pairs const &... pairs) const {
+        return eval_impl_ph(std::index_sequence_for<Pairs...>{}, p, std::tie(pairs...));
+      }
+    };
+#endif
 
     // any object hold by reference wrapper is redirected to the evaluator of the object
     template <typename T, typename... Contexts> struct evaluator<std::reference_wrapper<T>, Contexts...> {
