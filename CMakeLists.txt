@@ -99,6 +99,7 @@ message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 option(PythonSupport "Build with Python support" ON)
 if (PythonSupport)
  add_subdirectory(cpp2py)
+ set(TRIQS_WITH_PYTHON_SUPPORT 1) # To export the TRIQSConfig file
 endif (PythonSupport)
 
 #---------------------------------------------------------------------
