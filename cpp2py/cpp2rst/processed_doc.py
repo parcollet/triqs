@@ -17,12 +17,6 @@ Meaning of the @option in the doc:
  * @include     For a class, a function, the top level file to include [default: the definition file]
  * @example filename  File name of the example. Path should start from doc/reference/c++
 
- * @manual_methods  Comma separated list of methods which are referenced in the table,
-                    but the page of doc is not generated. It will be written manually.
- * @manual_friends  Comma separated list of non member functions which are referenced in the table,
-                    but the page of doc is not generated. It will be written manually.
-
-The @ MUST BE THE LAST FIELDS
 """
 
 # --------------------------------- 
@@ -61,7 +55,7 @@ def clean_doc_string(s):
 
 class ProcessedDoc: 
     
-    fields_allowed_in_docs = ['include', 'return', 'synopsis', 'warning','figure', 'note', 'example', 'param', 'tparam', 'group'] 
+    fields_allowed_in_docs = ['include', 'return', 'synopsis', 'warning','figure', 'note', 'example', 'param', 'tparam', 'group', 'head', 'tail'] 
     fields_with_multiple_entry = ['param', 'tparam']
 
     """

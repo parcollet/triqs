@@ -2,6 +2,7 @@ import os, re
 import cpp2py.clang_parser as CL
 from synopsis import make_synopsis_list, make_synopsis_template_decl
 from processed_doc import replace_latex, clean_doc_string
+from collections import OrderedDict
 
 # common tools for both rendering functions
 
@@ -24,23 +25,15 @@ toctree_hidden ="""
       
 """
 
-def make_header(s):
+def make_header(s, char = '-'):
     """ Make a rst header from the string s """
-    return '\n\n' + s + '\n' + '-'*len(s)  + '\n\n'
+    return '\n\n' + s + '\n' + char*len(s)  + '\n\n'
 
 def escape_lg(s):
     """Escape the > and < in the string, which are special in rst"""
     return s.replace('>','\>').replace('<','\<')
 
-def render_list(item_list, header):
-    """ 
-       Make rst code for a list of items with  a header
-       It splits the first word in a separate column
-    """
-    if not item_list: return ''
-    head = make_header(header) if header else ''
-    l = [ (x+'   ').split(' ',1) for x in item_list]
-    return head + '\n'.join(" * **%s**: %s\n"%(k.strip(),v) for (k,v) in l)
+#------------------------------------
 
 def render_note(s) :
     """ Make rst code for a note. Nothing if empty  """
@@ -53,6 +46,18 @@ def render_warning(s) :
     return """
 .. warning::
     %s"""%(s) if s else ''
+
+#-------------------------------------
+
+def render_list(item_list, header, char):
+    """ 
+       Make rst code for a list of items with  a header
+       It splits the first word in a separate column
+    """
+    if not item_list: return ''
+    head = make_header(header, char) if header else ''
+    l = [ (x+'   ').split(' ',1) for x in item_list]
+    return head + '\n'.join(" * **%s**: %s\n"%(k.strip(),v) for (k,v) in l)
    
 #-------------------------------------
 
@@ -90,7 +95,7 @@ def render_example(filename):
         #print "example file %s (in %s) does not exist"%(filename,os.getcwd())
         return ''
     ls = open(filename).read().strip().split('\n')
-    # What is this ??
+    # FIXME  What is this ??
     r = [i for i, l in enumerate(ls) if not (re.match(r"^\s*/?\*",l) or re.match("^\s*//",l))]
     s, e = r[0],r[-1]+1
     assert r == range(s,e)
@@ -149,34 +154,74 @@ def render_fnt(parent_class, f_name, f_overloads):
 """
     # Synopsis
     R += make_synopsis_list(f_overloads) + '\n\n'
+     
+    # We regroup the overload as in cppreference
+   
+    def make_unique(topic) :
+        rets = set(f.processed_doc.elements.pop(topic, '').strip() for f in f_overloads)
+        rets = list(x for x in rets if x)
+        if len(rets)> 1: print "Warning : Multiple documentation of %s across overloads. Picking first one"%topic
+        return rets[0] if rets else ''
+   
+    def make_unique_list(topic) : 
+        D = OrderedDict()
+        for n, f in enumerate(f_overloads):
+           plist = f.processed_doc.elements.pop(topic) # p is a string "NAME REST"
+           for p in plist : 
+               name, desc = (p + '   ').split(' ',1)
+               if name not in D:
+                   D[name] = desc.strip()
+               else:
+                   if D[name] != desc.strip() : 
+                       print "Warning : multiple definition of parameter %s at overload %s"%(name, n)
+        return D
+
+    def render_dict(d, header, char):
+        """ 
+           Make rst code for a list of items with  a header
+           It splits the first word in a separate column
+        """
+        if not d: return ''
+        head = make_header(header, char) if header else ''
+        return head + '\n'.join(" * **%s**: %s\n"%(k.strip(),v) for (k,v) in d.items())
+
+    has_overload = len(f_overloads)> 1
+
+    # Head doc 
+    head = make_unique('head') or ("Documentation" if has_overload else '')
+    R += '%s\n\n'%head 
+
+    # The piece of doc which is overload dependent
+    for num, f in enumerate(f_overloads):
+        pd =  f.processed_doc
+        num_s =  '**%s)**  '%(num+1) if has_overload else '' 
+        if pd.doc : R +=  '\n\n %s %s\n '%(num_s,  pd.doc)+ '\n'
+
+    # Tail doc 
+    R += '%s\n\n' %make_unique('tail') 
+
+    # tparam and param
+    tparam_dict = make_unique_list('tparam')
+    param_dict = make_unique_list('param')
     
-    # HOW DO WE GROUP THE OVERLOAD
-    # Enumerate all overloads
-    for n, f in enumerate(f_overloads):
-        doc = f.processed_doc
-        doc_elem = doc.elements
+    R += render_dict(tparam_dict, 'Template parameters', '^')
+    R += render_dict(param_dict, 'Parameters','^')
+ 
+    # Returns 
+    rets = make_unique("return")
+    if rets : R += make_header('Returns', '^') + " * %s"%rets
 
-        num = '%s.'%(n+1) if len(f_overloads)>1 else ''
-        R += '\n' + num + ' ' + doc.brief_doc + '\n'
-        R += doc.doc
-
-        # TODO which order ?
-        if 'note' in doc_elem :     R += render_note(doc_elem.pop('note'))
-        if 'warning' in doc_elem:   R += render_warning(doc_elem.pop('warning'))
-        if 'figure' in doc_elem:    R += render_fig(doc_elem.pop('figure'))
-        if 'tparam' in doc_elem:    R += render_list(doc_elem.pop('tparam'), 'Template parameters')
-        if 'param' in doc_elem:     R += render_list(doc_elem.pop('param'), 'Parameters')
-        if 'return' in doc_elem:    R += make_header('Return value')        + doc_elem.pop('return')
-
-    # any example from the overloads
-    # Should we TAKE ONLY ONE ????? Error ??
-    example_file_name = reduce(lambda x,y : x or y, [ f.processed_doc.elements.pop('example', '') for f in f_overloads], '')  
+    # Examples 
+    example_file_name = make_unique("example")
     R += render_example(example_file_name)
+
+    # Warning 
+    w = make_unique("warning")
+    R += render_warning(w)
 
     return R
 
 #------------------------------------
-
 # Why is all_methods, functoni passed but not members ???
 # Why not do the work here ?
 
@@ -207,7 +252,7 @@ Defined in header <*{incl}*>
 
 .. code-block:: c
 
-    {templ_synop}class {cls.spelling};
+    {templ_synop}class {cls.spelling}
 
 {cls_doc.brief_doc}
 
@@ -216,7 +261,7 @@ Defined in header <*{incl}*>
 
     # 
     R += cls_doc.doc
-    if 'tparam' in doc_elem:    R += render_list(doc_elem.pop('tparam'), 'Template parameters')
+    if 'tparam' in doc_elem:    R += render_list(doc_elem.pop('tparam'), 'Template parameters', '-')
     if 'note' in doc_elem :     R += render_note(doc_elem.pop('note'))
     if 'warning' in doc_elem:   R += render_warning(doc_elem.pop('warning'))
     if 'figure' in doc_elem:    R += render_fig(doc_elem.pop('figure'))
@@ -259,3 +304,30 @@ Defined in header <*{incl}*>
     if 'example' in doc_elem: R += render_example(doc_elem.pop('example'))
     
     return R
+
+#-------------------------------------
+
+def render_ns(ns, all_functions, all_classes): 
+ 
+    ns = re.sub('::', '_', ns)
+    R = ''
+ 
+    if all_classes:
+        R += make_header('classes')
+        #R += render_table([(":ref:`%s <_%s_%s>`"%(cls.spelling,escape_lg(ns), escape_lg(cls.spelling)), cls.processed_doc.brief_doc) for cls in all_classes ])
+        R += render_table([(":ref:`%s <%s>`"%(cls.spelling, escape_lg(cls.spelling)), cls.processed_doc.brief_doc) for cls in all_classes ])
+        R += toctree_hidden
+        for cls in all_classes:
+           R += "    {ns}/{cls.spelling}\n".format(ns = ns, cls= cls)
+
+    if all_functions:
+        R += make_header('Functions')
+        R += render_table([(":ref:`%s <%s>`"%(name, escape_lg(name)), f_list[0].processed_doc.brief_doc) for (name, f_list) in all_functions.items() ])
+        #R += render_table([(":ref:`%s <%s_%s>`"%(name,escape_lg(ns), escape_lg(name)), f_list[0].processed_doc.brief_doc) for (name, f_list) in all_functions.items() ])
+        R += toctree_hidden
+        for f_name in all_functions:
+           R += "    {ns}/{f_name}\n".format(ns = ns, f_name = f_name)
+   
+    return R
+
+

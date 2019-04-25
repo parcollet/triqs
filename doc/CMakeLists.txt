@@ -21,11 +21,13 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/conf.py.in ${CMAKE_CURRENT_BINARY_DIR
 # -----------------------------------------------------------------------------
 # list of namespaces selected by c++2rst
 set(NS
+    -N triqs::gfs
     -N triqs::det_manip
     -N triqs::mc_tools
-    -N triqs::hilbert_space
-    -N triqs::atom_diag
-    -N triqs::statistics)
+    # -N triqs::hilbert_space
+    #-N triqs::atom_diag
+    #-N triqs::statistics
+)
 
 get_property(TRIQS_INCLUDE_DIRS TARGET triqs PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
 get_property(TRIQS_SYSTEM_INCLUDE_DIRS TARGET triqs PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES)
@@ -39,9 +41,10 @@ endforeach()
 
 # Caution! This will alter the files in doc/cpp2rst_generated
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cpp2rst.log DEPENDS triqs
+		   COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/reference/cpp/generated 
 		   COMMAND PYTHONPATH=${CPP2PY_BINARY_DIR}:$ENV{PYTHONPATH} ${CPP2PY_BINARY_DIR}/bin/c++2rst ${NS}
-		   ${CMAKE_CURRENT_SOURCE_DIR}/reference/doc_root.hpp
-		   --output_directory ${CMAKE_CURRENT_SOURCE_DIR}/cpp2rst_generated
+		   ${CMAKE_CURRENT_SOURCE_DIR}/reference/cpp/doc_root.hpp
+		   --output_directory ${CMAKE_CURRENT_SOURCE_DIR}/reference/cpp/generated
 		   --cxxflags "-std=c++17 -DTRIQS_BUILDING_LIBRARY -I${CMAKE_SOURCE_DIR}"
 		   ${CPP2RST_INCLUDE_DIRS}
 		   ${CPP2RST_SYSTEM_INCLUDE_DIRS}
