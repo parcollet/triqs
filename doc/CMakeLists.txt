@@ -16,6 +16,8 @@ message(STATUS "Detected MathJax at ${MATHJAX_PATH}")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/conf.py.in ${CMAKE_CURRENT_BINARY_DIR}/conf.py @ONLY)
 
+file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/sphinxext DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 # -----------------------------------------------------------------------------
 # Make an optional target that allows us to regenerate the C++ doc with c++2rst
 # -----------------------------------------------------------------------------
@@ -55,15 +57,6 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cpp2rst.log DEPENDS triqs
 add_custom_target(docs_cpp2rst DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/cpp2rst.log)
 add_dependencies(docs_cpp2rst triqs)
 
-# ------------------------------------------------------------------------------------------------
-# Copy the directory substructure and link all files with relevant extensions
-# cp_rs is a script in cpp2py/bin, it mimics cp -rs on Linux
-# and filters the relevant extension
-# ------------------------------------------------------------------------------------------------
-
-set(EXT_FOR_DOC "bib rst png txt cpp css_t conf css js gif jpg py html bib sh md")
-execute_process(COMMAND ${CPP2PY_BINARY_DIR}/bin/cp_rs ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${EXT_FOR_DOC})
-
 #---------------------------------
 # Top Sphinx target
 # ---------------------------------
@@ -74,7 +67,7 @@ FILE(GLOB_RECURSE SOURCES *.rst)
 
 SET(sphinx_top ${CMAKE_CURRENT_BINARY_DIR}/html/contents.html)
 add_custom_command(OUTPUT ${sphinx_top} DEPENDS ${SOURCES}
-  COMMAND PYTHONPATH=${CMAKE_BINARY_DIR}:${CPP2PY_BINARY_DIR}:$ENV{PYTHONPATH} ${SPHINXBUILD_EXECUTABLE} -c . -j8 -b html ${CMAKE_CURRENT_BINARY_DIR} html)
+ COMMAND PYTHONPATH=${CMAKE_BINARY_DIR}:${CPP2PY_BINARY_DIR}:$ENV{PYTHONPATH} ${SPHINXBUILD_EXECUTABLE} -c . -j8 -b html ${CMAKE_CURRENT_SOURCE_DIR} html)
 add_custom_target(docs_sphinx ALL DEPENDS ${sphinx_top} ${CMAKE_CURRENT_BINARY_DIR})
 
 # doc depends on all python modules (because they  may be loaded in examples).
