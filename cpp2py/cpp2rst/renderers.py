@@ -1,4 +1,4 @@
-import os, re
+import os, re, itertools
 import cpp2py.clang_parser as CL
 from synopsis import make_synopsis_list, make_synopsis_template_decl, make_label, replace_ltgt
 from processed_doc import replace_latex, clean_doc_string
@@ -288,16 +288,25 @@ Defined in header <*{incl}*>
         return s.pop if s else ''
    
     def make_func_list(all_f, header_name):
-        R = ''
-        if len(all_f) > 0:
-            R += make_header(header_name)
-            R += render_table([(":ref:`%s <%s>`"%(escape_lg(name),make_label(cls.name + '_' + name)), f_list[0].processed_doc.brief_doc) for (name, f_list) in all_f.items() ])
-            R += toctree_hidden
-            for f_name in all_f:
-               R += "    {cls_name}/{f_name}\n".format(cls_name = replace_ltgt(cls.name), f_name = f_name)
+        if not all_f : return ''
+        R = make_header(header_name)
+        
+        # Regroup the function by sub category
+        D = OrderedDict()
+        for name, flist in all_f.items():
+            cat =flist[0].processed_doc.elements.get('category', None) 
+            D.setdefault(cat, list()).append((":ref:`%s <%s>`"%(escape_lg(name),make_label(cls.name + '_' + name)), flist[0].processed_doc.brief_doc))
+        
+        # Make the sub lists
+        for cat, list_table_args in D.items() : 
+            if cat : R += make_header(cat, '~')
+            R += render_table(list_table_args)
+        
+        # the hidden toctree is not regrouped
+        R += toctree_hidden
+        for f_name in all_f:
+           R += "    {cls_name}/{f_name}\n".format(cls_name = replace_ltgt(cls.name), f_name = f_name)
         return R
-
-    # sort function by category
 
     R += make_func_list(all_methods, 'Member functions')
     R += make_func_list(all_friend_functions, 'Non Member functions')
