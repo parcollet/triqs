@@ -42,6 +42,7 @@ foreach(I ${TRIQS_SYSTEM_INCLUDE_DIRS})
 endforeach()
 
 # Caution! This will alter the files in doc/cpp2rst_generated
+# FIXME : clean after merging the nda_handle branch, we don't nee the BUILDING, or Python include
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cpp2rst.log DEPENDS triqs
 		   COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/reference/cpp/generated 
 		   COMMAND PYTHONPATH=${CPP2PY_BINARY_DIR}:$ENV{PYTHONPATH} ${CPP2PY_BINARY_DIR}/bin/c++2rst ${NS}
