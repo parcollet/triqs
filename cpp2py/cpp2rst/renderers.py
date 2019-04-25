@@ -241,11 +241,11 @@ def render_cls(cls, all_methods, all_friend_functions):
     incl = doc_elem.pop('include', '')
 
     # class header
-    cls_name_fully_qualified = CL.fully_qualified_name(cls)
+    fully_qualified_name = CL.fully_qualified_name(cls)
     R +="""
-.. _{cls.spelling}:
+.. _{cls.name_for_label}:
 
-{cls_name_fully_qualified}
+{cls.fully_qualified_name}
 {separator}
 
 Defined in header <*{incl}*>
@@ -257,7 +257,7 @@ Defined in header <*{incl}*>
 {cls_doc.brief_doc}
 
 {cls_doc.doc}
-    """.format(cls = cls, incl = incl.strip(), separator = '=' * (len(cls_name_fully_qualified)), templ_synop = make_synopsis_template_decl(cls), cls_doc = cls_doc, cls_name_fully_qualified = cls_name_fully_qualified)
+    """.format(cls = cls, incl = incl.strip(), separator = '=' * (len(cls.fully_qualified_name)), templ_synop = make_synopsis_template_decl(cls), cls_doc = cls_doc)
 
     # 
     R += cls_doc.doc
@@ -291,7 +291,7 @@ Defined in header <*{incl}*>
         R = ''
         if len(all_f) > 0:
             R += make_header(header_name)
-            R += render_table([(":ref:`%s <%s_%s>`"%(name,escape_lg(cls.spelling), escape_lg(name)), f_list[0].processed_doc.brief_doc) for (name, f_list) in all_f.items() ])
+            R += render_table([(":ref:`%s <%s_%s>`"%(escape_lg(name),escape_lg(cls.spelling), escape_lg(name)), f_list[0].processed_doc.brief_doc) for (name, f_list) in all_f.items() ])
             R += toctree_hidden
             for f_name in all_f:
                R += "    {cls.spelling}/{f_name}\n".format(cls = cls, f_name = f_name)
@@ -315,7 +315,7 @@ def render_ns(ns, all_functions, all_classes):
     if all_classes:
         R += make_header('classes')
         #R += render_table([(":ref:`%s <_%s_%s>`"%(cls.spelling,escape_lg(ns), escape_lg(cls.spelling)), cls.processed_doc.brief_doc) for cls in all_classes ])
-        R += render_table([(":ref:`%s <%s>`"%(cls.spelling, escape_lg(cls.spelling)), cls.processed_doc.brief_doc) for cls in all_classes ])
+        R += render_table([(":ref:`%s <%s>`"%(cls.spelling, cls.name_for_label), cls.processed_doc.brief_doc) for cls in all_classes ])
         R += toctree_hidden
         for cls in all_classes:
            R += "    {ns}/{cls.spelling}\n".format(ns = ns, cls= cls)

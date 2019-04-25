@@ -121,8 +121,20 @@ class Cpp2Rst:
         classes =CL.get_classes(self.root, keep_cls, traverse_namespaces = True, keep_ns = keep_ns)
         classes = list(classes) # make a list to avoid exhaustion of the generator
   
+        D = OrderedDict()
         for cls in classes : 
-            print "CLASS", cls.spelling, CL.get_name_with_template_specialization(cls)
+            cls.namespace = CL.get_namespace(cls)
+            cls.name = CL.get_name_with_template_specialization(cls) or cls.spelling 
+            cls.fully_qualified_name = '::'.join([cls.namespace, cls.name])
+            cls.name_for_label = synopsis.make_label(cls.fully_qualified_name)
+            D[cls.fully_qualified_name] = cls
+            print "CLASS", cls.name
+            print "CLASS", cls.fully_qualified_name 
+            print "CLASS", cls.name_for_label
+            print "CLASS", "----------------------"
+        
+        # Eliminate doublons, like forward declarations
+        classes = D.values()
 
         # A list of AST nodes for the methods and functions
         all_functions = CL.get_functions(self.root, keep_fnt, traverse_namespaces = True, keep_ns = keep_ns)
@@ -156,7 +168,7 @@ class Cpp2Rst:
         # Cross linking
         # synopsis will be called by the renderers, and they need to know the class we are documenting
         synopsis.class_list = classes
-        synopsis.class_list_name = [n.spelling for n in classes]
+        synopsis.class_list_name = ['::'.join([cls.namespace, cls.spelling]) for cls in classes]
 
         # First treat the class
         for c in classes:
