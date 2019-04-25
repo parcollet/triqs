@@ -176,7 +176,7 @@ class Cpp2Rst:
                 print "Skipping a class with an empty name !"
                 continue
 
-            print " ... class :  " + c.spelling, CL.fully_qualified_name(c) #, c.kind, CL.get_name_with_template_specialization(c)
+            print " ... class :  %s"%c.fully_qualified_name
 
             # process the doc of the class and add it to the node
             c.processed_doc = ProcessedDoc(c)
@@ -203,10 +203,10 @@ class Cpp2Rst:
 
             # the file for the class
             r = render_cls(c, all_methods, all_friend_functions)
-            safe_write(c.spelling, r)
+            safe_write(synopsis.replace_ltgt(c.name), r)
              
             # create a directory with the class name and cd into it
-            mkchdir(c.spelling)
+            mkchdir(synopsis.replace_ltgt(c.name))
 
             # write a file for each function
             def render(message, d) : 

@@ -1,9 +1,16 @@
 import re, os
 import cpp2py.clang_parser as CL
 
+def replace_ltgt(name):
+    """Make the changes in names suitable for using as label in RST : remove < > ..."""
+    r = re.sub('<','LT', name)
+    r = re.sub('>','GT', r)
+    return r
+
 def make_label(name):
     """Make the changes in names suitable for using as label in RST : remove < > ..."""
-    r = re.sub('[<>]','%', name)
+    r = re.sub('<','LT', name)
+    r = re.sub('>','GT', r)
     r = re.sub('[\.]','_',r)
     r = re.sub('::','__', r)
     return r
@@ -25,29 +32,30 @@ shift = 4
     # if shift >= 0 : return '\n'.join(shift*' ' + x for x in s.split('\n'))
     # return '\n'.join(x[shift:] for x in s.split('\n'))
 
-def process_param_type(t_name_canonical, remove):
-
+def process_param_type(t_name, remove):
+    
     def decay(s) :
         for tok in ['const ', 'const&', '&&', '&'] :
             s = re.sub(tok,'',s)
         return s.strip()
  
-    print "-------------------- process_param_type----------------- \n", t_name_canonical, remove
+    print "-------------------- process_param_type----------------- \n", t_name, remove
 
-    t_name_canonical_decayed = decay(t_name_canonical).split('<',1)[0]
+    t_name_decayed = decay(t_name).split('<',1)[0]
 
     # Remove the namespace
-    t_name = re.sub(remove, '', t_name_canonical)
+    t_name = re.sub(remove, '', t_name)
     # replace const A & by A const & 
     t_name = re.sub(r'const ([^&]*) &', r'\1 const &', t_name)
     
+    return t_name 
+
     # Cross link
-    print t_name_canonical_decayed
-    print t_name 
-    #print class_list_name
-    if t_name_canonical_decayed in class_list_name: # has a link
-       part_to_labelize = re.sub(remove, '', t_name_canonical_decayed)
-       label = make_label(t_name_canonical_decayed)
+    print "LINK", t_name_decayed
+    print "LINK", make_label(decay(t_name))
+    if t_name_decayed in class_list_name: # has a link
+       part_to_labelize = re.sub(remove, '', t_name_decayed)
+       label = make_label(decay(t_name))
        t_name = t_name.replace(part_to_labelize,":ref:`%s <%s>`"%(part_to_labelize,label))
        #t_name =  ":ref:`%s <%s>`"%(t_name,label)
     print "TNAME : ", t_name, "\n------------------------------------------"
@@ -83,7 +91,8 @@ def make_synopsis_one_function(f, number):
     #for p in CL.get_params(f):
     #    print p.type.get_canonical().spelling
 
-    params1 = [(p.type.get_canonical().spelling, p.spelling, CL.get_param_default_value(p)) for p in CL.get_params(f)]
+    #params1 = [(p.type.get_canonical().spelling, p.spelling, CL.get_param_default_value(p)) for p in CL.get_params(f)]
+    params1 = [(p.type.spelling, p.spelling, CL.get_param_default_value(p)) for p in CL.get_params(f)]
     params = ["%s %s"%(process_param_type(t, remove = ns), ":param:`%s`"%n if n else '') + (" = %s"%d if d else "") for t,n,d in params1]
   
     # first attempt : one line, else multiple line

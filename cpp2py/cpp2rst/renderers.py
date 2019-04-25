@@ -1,6 +1,6 @@
 import os, re
 import cpp2py.clang_parser as CL
-from synopsis import make_synopsis_list, make_synopsis_template_decl
+from synopsis import make_synopsis_list, make_synopsis_template_decl, make_label, replace_ltgt
 from processed_doc import replace_latex, clean_doc_string
 from collections import OrderedDict
 
@@ -140,14 +140,14 @@ def render_fnt(parent_class, f_name, f_overloads):
     
     # tag and name of the class
     parent_cls_name_fully_qualified = (CL.fully_qualified_name(parent_class) + "::") if parent_class else ""
-    parent_cls_spelling = (parent_class.spelling + '_') if parent_class else '' 
+    parent_cls_name = (parent_class.name + '_') if parent_class else '' 
     f_name_full = parent_cls_name_fully_qualified + f_name
     
     R += """
 .. _{class_rst_ref}:
 
 {f_name_full}
-""".format(f_name_full = f_name_full, class_rst_ref = parent_cls_spelling + f_name)
+""".format(f_name_full = f_name_full, class_rst_ref = make_label(parent_cls_name + f_name))
 
     R += '=' * (len(f_name_full)+0) + '\n' + """
 
@@ -291,11 +291,13 @@ Defined in header <*{incl}*>
         R = ''
         if len(all_f) > 0:
             R += make_header(header_name)
-            R += render_table([(":ref:`%s <%s_%s>`"%(escape_lg(name),escape_lg(cls.spelling), escape_lg(name)), f_list[0].processed_doc.brief_doc) for (name, f_list) in all_f.items() ])
+            R += render_table([(":ref:`%s <%s>`"%(escape_lg(name),make_label(cls.name + '_' + name)), f_list[0].processed_doc.brief_doc) for (name, f_list) in all_f.items() ])
             R += toctree_hidden
             for f_name in all_f:
-               R += "    {cls.spelling}/{f_name}\n".format(cls = cls, f_name = f_name)
+               R += "    {cls_name}/{f_name}\n".format(cls_name = replace_ltgt(cls.name), f_name = f_name)
         return R
+
+    # sort function by category
 
     R += make_func_list(all_methods, 'Member functions')
     R += make_func_list(all_friend_functions, 'Non Member functions')
@@ -315,10 +317,11 @@ def render_ns(ns, all_functions, all_classes):
     if all_classes:
         R += make_header('classes')
         #R += render_table([(":ref:`%s <_%s_%s>`"%(cls.spelling,escape_lg(ns), escape_lg(cls.spelling)), cls.processed_doc.brief_doc) for cls in all_classes ])
-        R += render_table([(":ref:`%s <%s>`"%(cls.spelling, cls.name_for_label), cls.processed_doc.brief_doc) for cls in all_classes ])
+        R += render_table([(":ref:`%s <%s>`"%(escape_lg(cls.name), cls.name_for_label), cls.processed_doc.brief_doc) for cls in all_classes ])
         R += toctree_hidden
         for cls in all_classes:
-           R += "    {ns}/{cls.spelling}\n".format(ns = ns, cls= cls)
+            R += "    {ns}/{filename}\n".format(ns = ns, filename = replace_ltgt(cls.name))
+
 
     if all_functions:
         R += make_header('Functions')
