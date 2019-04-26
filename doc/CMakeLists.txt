@@ -22,7 +22,7 @@ file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/sphinxext DESTINATION ${CMAKE_CURRENT_BIN
 # Make an optional target that allows us to regenerate the C++ doc with c++2rst
 # -----------------------------------------------------------------------------
 # list of namespaces selected by c++2rst
-set(NS
+set(NAMESPACES
     -N triqs::gfs
     -N triqs::det_manip
     -N triqs::mc_tools
@@ -34,27 +34,29 @@ set(NS
 get_property(TRIQS_INCLUDE_DIRS TARGET triqs PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
 get_property(TRIQS_SYSTEM_INCLUDE_DIRS TARGET triqs PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES)
 list(REMOVE_ITEM TRIQS_INCLUDE_DIRS ${TRIQS_SYSTEM_INCLUDE_DIRS})
-foreach(I ${TRIQS_INCLUDE_DIRS})
- set (CPP2RST_INCLUDE_DIRS  ${CPP2RST_INCLUDE_DIRS} --includes ${I})
+foreach(DIR ${TRIQS_INCLUDE_DIRS})
+  set(CPP2RST_INCLUDE_FLAGS ${CPP2RST_INCLUDE_FLAGS} -I${DIR})
 endforeach()
-foreach(I ${TRIQS_SYSTEM_INCLUDE_DIRS})
-  set (CPP2RST_SYSTEM_INCLUDE_DIRS  ${CPP2RST_SYSTEM_INCLUDE_DIRS} --system_includes ${I})
+foreach(DIR ${TRIQS_SYSTEM_INCLUDE_DIRS})
+  set(CPP2RST_INCLUDE_FLAGS ${CPP2RST_INCLUDE_FLAGS} -isystem=${DIR})
 endforeach()
+get_property(CPP2RST_CXXFLAGS TARGET triqs PROPERTY INTERFACE_COMPILE_OPTIONS)
 
-# Caution! This will alter the files in doc/cpp2rst_generated
+# Caution! This will alter the files in reference/cpp/generated
 # FIXME : clean after merging the nda_handle branch, we don't nee the BUILDING, or Python include
 add_custom_target(docs_cpp2rst)
-add_custom_command(TARGET docs_cpp2rst DEPENDS triqs
-		   COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/reference/cpp/generated 
-		   COMMAND PYTHONPATH=${CPP2PY_BINARY_DIR}:$ENV{PYTHONPATH} ${CPP2PY_BINARY_DIR}/bin/c++2rst ${NS}
-		   ${CMAKE_CURRENT_SOURCE_DIR}/reference/cpp/doc_root.hpp
-		   --output_directory ${CMAKE_CURRENT_SOURCE_DIR}/reference/cpp/generated
-		   --cxxflags "-std=c++17 -DTRIQS_BUILDING_LIBRARY -I${CMAKE_SOURCE_DIR}"
-		   ${CPP2RST_INCLUDE_DIRS}
-		   ${CPP2RST_SYSTEM_INCLUDE_DIRS}
-		   --includes ${CMAKE_SOURCE_DIR}/cpp2py/include
-		   --includes ${CMAKE_BINARY_DIR}/Config
-		   VERBATIM)
+add_custom_command(
+  TARGET docs_cpp2rst
+  COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/reference/cpp/generated
+  COMMAND PYTHONPATH=${CPP2PY_BINARY_DIR}:$ENV{PYTHONPATH} ${CPP2PY_BINARY_DIR}/bin/c++2rst
+  ${CMAKE_CURRENT_SOURCE_DIR}/reference/cpp/doc_root.hpp
+  ${NAMESPACES}
+  --output_directory ${CMAKE_CURRENT_SOURCE_DIR}/reference/cpp/generated
+  --cxxflags="${CPP2RST_CXXFLAGS}"
+  ${CPP2RST_INCLUDE_FLAGS}
+  -I${CMAKE_BINARY_DIR}/Config
+  -isystem=${CMAKE_SOURCE_DIR}/cpp2py/include
+)
 
 #---------------------------------
 # Top Sphinx target
@@ -62,15 +64,12 @@ add_custom_command(TARGET docs_cpp2rst DEPENDS triqs
 find_package(Sphinx)
 
 add_custom_target(docs_sphinx ALL)
-
 add_custom_command(TARGET docs_sphinx 
                    COMMAND PYTHONPATH=${CMAKE_BINARY_DIR}:${CPP2PY_BINARY_DIR}:$ENV{PYTHONPATH} ${SPHINXBUILD_EXECUTABLE} -c . -j8 -b html ${CMAKE_CURRENT_SOURCE_DIR} html)
 
-# doc depends on all python modules (because they  may be loaded in examples).
+# Autodoc usage requires the python modules to be built first
 GET_PROPERTY(CPP2PY_MODULES_LIST GLOBAL PROPERTY CPP2PY_MODULES_LIST)
-foreach (mod ${CPP2PY_MODULES_LIST})
- add_dependencies(docs_sphinx ${mod})
-endforeach()
+add_dependencies(docs_sphinx ${CPP2PY_MODULES_LIST})
 
 # ---------------------------------
 # Install
