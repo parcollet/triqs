@@ -1,6 +1,6 @@
 import os, re, itertools
 import cpp2py.clang_parser as CL
-from synopsis import make_synopsis_list, make_synopsis_template_decl, make_label, replace_ltgt
+from synopsis import make_synopsis_list, make_synopsis_template_decl, make_label, replace_ltgt, escape_lg
 from processed_doc import replace_latex, clean_doc_string
 from collections import OrderedDict
 
@@ -28,10 +28,6 @@ toctree_hidden ="""
 def make_header(s, char = '-'):
     """ Make a rst header from the string s """
     return '\n\n' + s + '\n' + char*len(s)  + '\n\n'
-
-def escape_lg(s):
-    """Escape the > and < in the string, which are special in rst"""
-    return s.replace('>','\>').replace('<','\<')
 
 #------------------------------------
 

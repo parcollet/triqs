@@ -66,12 +66,25 @@ class Cpp2Rst:
 
         print "Generating the documentation ..."
         mkchdir(output_directory)
+
+        # The namespace are going to be cleaned in the parameters in the synopsis
+        synopsis.process_param_type_ns_to_clean = [x + '::' for x in self.namespaces]
+       
+        # Gather and preprocess all classes and functions
+        d = {}
         for ns in self.namespaces:
-            self.run_one_ns(ns)
+            d[ns] = self.analyse_one_ns(ns)
+       
+        # Cross linking
+        # synopsis will be called by the renderers, and they need to know the class we are documenting
+        synopsis.class_list = sum((cls_list for (cls_list, fnt_list) in d.values()), list())
+        
+        for ns in self.namespaces:
+            self.run_one_ns(ns, *d[ns])
 
    # ------------------------
     
-    def run_one_ns(self, namespace):
+    def analyse_one_ns(self, namespace):
 
         print "*** Namespace %s ***"%namespace
 
@@ -128,10 +141,10 @@ class Cpp2Rst:
             cls.fully_qualified_name = '::'.join([cls.namespace, cls.name])
             cls.name_for_label = synopsis.make_label(cls.fully_qualified_name)
             D[cls.fully_qualified_name] = cls
-            print "CLASS", cls.name
-            print "CLASS", cls.fully_qualified_name 
-            print "CLASS", cls.name_for_label
-            print "CLASS", "----------------------"
+            # print "CLASS", cls.name
+            # print "CLASS", cls.fully_qualified_name 
+            # print "CLASS", cls.name_for_label
+            # print "CLASS", "----------------------"
         
         # Eliminate doublons, like forward declarations
         classes = D.values()
@@ -143,6 +156,12 @@ class Cpp2Rst:
         # Analyse the doc strings 
         for f in all_functions:
             f.processed_doc = ProcessedDoc(f)
+
+        return classes, all_functions
+
+    # ------------------------
+    
+    def run_one_ns(self, namespace, classes, all_functions):
 
         # c : AST node of name A::B::C::clsname makes and cd into A/B/C
         def mkchdir_for_one_node(node): 
@@ -164,11 +183,6 @@ class Cpp2Rst:
                 d.setdefault(decay(f.spelling),[]).append(f)
             return d
 
-
-        # Cross linking
-        # synopsis will be called by the renderers, and they need to know the class we are documenting
-        synopsis.class_list = classes
-        synopsis.class_list_name = ['::'.join([cls.namespace, cls.spelling]) for cls in classes]
 
         # First treat the class
         for c in classes:

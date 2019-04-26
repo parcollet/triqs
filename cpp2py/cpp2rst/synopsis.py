@@ -1,6 +1,11 @@
 import re, os
 import cpp2py.clang_parser as CL
 
+def escape_lg(s):
+    """Escape the > and < in the string, which are special in rst"""
+    return s.replace('>','\>').replace('<','\<')
+
+
 def replace_ltgt(name):
     """Make the changes in names suitable for using as label in RST : remove < > ..."""
     r = re.sub('<','LT', name)
@@ -32,34 +37,40 @@ shift = 4
     # if shift >= 0 : return '\n'.join(shift*' ' + x for x in s.split('\n'))
     # return '\n'.join(x[shift:] for x in s.split('\n'))
 
-def process_param_type(t_name, remove):
+process_param_type_ns_to_clean = None
+
+def process_param_type(param_node):
     
+    type_node = param_node.type
+    decl = CL.jump_to_declaration(param_node)
+
     def decay(s) :
         for tok in ['const ', 'const&', '&&', '&'] :
             s = re.sub(tok,'',s)
         return s.strip()
- 
-    print "-------------------- process_param_type----------------- \n", t_name, remove
 
-    t_name_decayed = decay(t_name).split('<',1)[0]
-
+    def clean_ns(s):
+        for x in process_param_type_ns_to_clean:
+            s = re.sub(x, '', s)
+        return s
+            
     # Remove the namespace
-    t_name = re.sub(remove, '', t_name)
     # replace const A & by A const & 
+    t_name = clean_ns(type_node.spelling)
     t_name = re.sub(r'const ([^&]*) &', r'\1 const &', t_name)
-    
-    return t_name 
+ 
+    # try to see if decl is in the known list 
+    if decl in class_list:
+        cls_idx = class_list.index(decl)
+        cls = class_list[cls_idx]
+        part_to_labelize = clean_ns(decay(t_name))
+        label = cls.name_for_label 
+        # First version is just the full name, with namespace
+        # t_name =  t_name.replace(part_to_labelize,":ref:`%s`"%(label))
+        t_name =  t_name.replace(part_to_labelize,":ref:`%s <%s>`"%(escape_lg(part_to_labelize),label)) 
 
-    # Cross link
-    print "LINK", t_name_decayed
-    print "LINK", make_label(decay(t_name))
-    if t_name_decayed in class_list_name: # has a link
-       part_to_labelize = re.sub(remove, '', t_name_decayed)
-       label = make_label(decay(t_name))
-       t_name = t_name.replace(part_to_labelize,":ref:`%s <%s>`"%(part_to_labelize,label))
-       #t_name =  ":ref:`%s <%s>`"%(t_name,label)
-    print "TNAME : ", t_name, "\n------------------------------------------"
     return t_name
+
 
 def process_rtype(t_name, remove):
     t_name = re.sub(remove, '', t_name)
@@ -88,13 +99,9 @@ def make_synopsis_one_function(f, number):
     name = " %s "%f.spelling.strip() if is_not_constructor else f.spelling.split('<',1)[0] # eliminate the <> in the constructor name
     qualif = CL.get_method_qualification(f) + (' noexcept' if getattr(f,'noexcept',False) else '')
   
-    #for p in CL.get_params(f):
-    #    print p.type.get_canonical().spelling
-
-    #params1 = [(p.type.get_canonical().spelling, p.spelling, CL.get_param_default_value(p)) for p in CL.get_params(f)]
-    params1 = [(p.type.spelling, p.spelling, CL.get_param_default_value(p)) for p in CL.get_params(f)]
-    params = ["%s %s"%(process_param_type(t, remove = ns), ":param:`%s`"%n if n else '') + (" = %s"%d if d else "") for t,n,d in params1]
-  
+    params1 = [(p, p.spelling, CL.get_param_default_value(p)) for p in CL.get_params(f)]
+    params = ["%s %s"%(process_param_type(t), ":param:`%s`"%n if n else '') + (" = %s"%d if d else "") for t,n,d in params1]
+ 
     # first attempt : one line, else multiple line
     nspace = 8 if number>=10 else 7
     sep = nspace*' ' +  '| '
@@ -106,6 +113,7 @@ def make_synopsis_one_function(f, number):
     
     brief = f.processed_doc.brief_doc
     r = ('%s:cppbrief:`%s`\n'%(sep,brief) if brief else '') + ('%s:green:`%s`\n'%(sep,template) if template else '')  + res + ') ' + qualif
+    
     return r.strip()
 
 
