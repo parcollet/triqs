@@ -248,7 +248,7 @@ Defined in header <*{incl}*>
 
 .. code-block:: c
 
-    {templ_synop}class {cls.spelling}
+    {templ_synop} class {cls.spelling}
 
 {cls_doc.brief_doc}
 

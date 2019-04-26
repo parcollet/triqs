@@ -172,10 +172,18 @@ namespace triqs {
 
       auto target_indices() const { return itertools::product_range(target().shape()); }
 
-      /// Shape of the data
+      /** 
+       * Shape of the data
+       *
+       * @category Accessors
+       */
       auto const &data_shape() const { return _data.shape(); }
 
-      /// Memorylayout of the data
+      /** 
+       * Memorylayout of the data
+       *
+       * @category Accessors
+       */
       auto const &memory_layout() const { return _data.indexmap().memory_layout(); }
 
       ///

@@ -136,7 +136,7 @@ class Cpp2Rst:
             return (c.location.file.name == self.filename) if self.target_file_only else True
         
         def keep_fnt(f):
-            # FIXME : Commented for debug
+            #print "RAW", f.spelling, f.raw_comment
             if not f.raw_comment : return False
             if  f.spelling.startswith('operator') or f.spelling in ['begin','end'] : return False
             return keep_cls(f) 

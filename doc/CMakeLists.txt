@@ -43,7 +43,8 @@ endforeach()
 
 # Caution! This will alter the files in doc/cpp2rst_generated
 # FIXME : clean after merging the nda_handle branch, we don't nee the BUILDING, or Python include
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cpp2rst.log DEPENDS triqs
+add_custom_target(docs_cpp2rst)
+add_custom_command(TARGET docs_cpp2rst DEPENDS triqs
 		   COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/reference/cpp/generated 
 		   COMMAND PYTHONPATH=${CPP2PY_BINARY_DIR}:$ENV{PYTHONPATH} ${CPP2PY_BINARY_DIR}/bin/c++2rst ${NS}
 		   ${CMAKE_CURRENT_SOURCE_DIR}/reference/cpp/doc_root.hpp
@@ -53,23 +54,17 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cpp2rst.log DEPENDS triqs
 		   ${CPP2RST_SYSTEM_INCLUDE_DIRS}
 		   --includes ${CMAKE_SOURCE_DIR}/cpp2py/include
 		   --includes ${CMAKE_BINARY_DIR}/Config
-		   2>&1 > cpp2rst.log
 		   VERBATIM)
-add_custom_target(docs_cpp2rst DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/cpp2rst.log)
-add_dependencies(docs_cpp2rst triqs)
 
 #---------------------------------
 # Top Sphinx target
 # ---------------------------------
 find_package(Sphinx)
 
-# Sources
-FILE(GLOB_RECURSE SOURCES *.rst)
+add_custom_target(docs_sphinx ALL)
 
-SET(sphinx_top ${CMAKE_CURRENT_BINARY_DIR}/html/contents.html)
-add_custom_command(OUTPUT ${sphinx_top} DEPENDS ${SOURCES}
- COMMAND PYTHONPATH=${CMAKE_BINARY_DIR}:${CPP2PY_BINARY_DIR}:$ENV{PYTHONPATH} ${SPHINXBUILD_EXECUTABLE} -c . -j8 -b html ${CMAKE_CURRENT_SOURCE_DIR} html)
-add_custom_target(docs_sphinx ALL DEPENDS ${sphinx_top} ${CMAKE_CURRENT_BINARY_DIR})
+add_custom_command(TARGET docs_sphinx 
+                   COMMAND PYTHONPATH=${CMAKE_BINARY_DIR}:${CPP2PY_BINARY_DIR}:$ENV{PYTHONPATH} ${SPHINXBUILD_EXECUTABLE} -c . -j8 -b html ${CMAKE_CURRENT_SOURCE_DIR} html)
 
 # doc depends on all python modules (because they  may be loaded in examples).
 GET_PROPERTY(CPP2PY_MODULES_LIST GLOBAL PROPERTY CPP2PY_MODULES_LIST)
