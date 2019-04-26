@@ -20,7 +20,7 @@ Meaning of the @option in the doc:
 """
 
 # --------------------------------- 
-# Should be internal ??
+
 def replace_latex(s, escape_slash=False):
     """replace 
        $XX X$  by :math:`XX X`
@@ -28,23 +28,15 @@ def replace_latex(s, escape_slash=False):
        [[ XXX]]  by :ref:` XXX`
      
     """
-    if not s : return s
-    any_math_char = 'A-Za-z0-9{}\[\],;|\(\)=./\/+-_^\'' #any math character
-    #matches all expressions starting and ending with any math char, with possibly whitespaces in between
-    pattern_1 = '\$(['+any_math_char+']['+any_math_char+' ]*['+any_math_char+']+)\$'
-    #matches any single math char
-    pattern_2 = '\$(['+any_math_char+'])\$'
-    #out of line formula
-    text=re.sub('\$'+pattern_1+'\$', r'\n\n.. math::\n\t\t\1\n\n..\n', s)
-    text=re.sub('\$'+pattern_2+'\$', r'\n\n.. math::\n\t\t\1\n\n..\n', text)
-    #inline formula
-    text=re.sub(pattern_1, r':math:`\1`', text)
-    text=re.sub(pattern_2, r':math:`\1`', text)
-    #to create a hyperlink
-    text=re.sub('\[\[([A-Za-z0-9{}\(,\)=./\/+-_]+)\]\]', r':ref:`\1`', text)
-
+    assert not escape_slash # useless
+    
+    text=re.sub('\$\$([^\$]+)\$\$', r'\n\n.. math::\n\t\t\1\n\n..\n', s, flags= re.DOTALL) # multiline math
+    text=re.sub('\$([^\$]+)\$', r':math:`\1`', text)
+ 
     if escape_slash: text=text.encode('string_escape')
     return text
+
+# --------------------------------- 
 
 def clean_doc_string(s):
     for p in [r"/\*",r"\*/",r"^\s*\*", r'\*\s*\n', r'\*/\s*$',r"///", r"//", r"\\brief"] : 

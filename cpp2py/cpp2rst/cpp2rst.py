@@ -82,7 +82,25 @@ class Cpp2Rst:
         for ns in self.namespaces:
             self.run_one_ns(ns, *d[ns])
 
-   # ------------------------
+    # ----------------------
+
+    # regroup the functions into a list of overloads
+    def regroup_func_by_names(self, fs):
+        """ Given a list of functions, regroup them by names in an OrderedDict. The Name will serve a filename """
+        d = OrderedDict()
+        def decay(name):
+            """Replace operator X by better names for"""
+            return name
+            # if 'operator' not in name : return name
+            # a, ca, c, co = '+ - * /',  '+= -= \*= /=',  "== !=",  r" comparison"
+            # d = {'*=' : ca,'+=' : ca,'/=' : ca,'-=' : ca,'*' : a,'+' : a,'/' : a,'-' : a, '==': c, '!=' : c, '<': co, '>' : co, '<=' : co, '>=' : co}
+            # n = name.replace('operator','').strip()
+            # return 'operator' + d[n] if n in d else name
+        for f in fs:
+            d.setdefault(decay(f.spelling),[]).append(f)
+        return d
+   
+    # ------------------------
     
     def analyse_one_ns(self, namespace):
 
@@ -95,9 +113,6 @@ class Cpp2Rst:
             """Given a namespace node n, shall we keep it ?"""
             ns = CL.fully_qualified(n) 
             return ns in namespace
-            # if 'std' in ns or 'boost' in ns or 'detail' in ns or 'impl' in ns : return False
-            # if len(self.namespaces) == 0 : return True
-            # return any((ns in x) for x in self.namespaces)
         
         def keep_cls(c):
             """ Given a class node, shall we keep it ? 
@@ -113,17 +128,15 @@ class Cpp2Rst:
  
             """
             if c.spelling.startswith('_') : return False
+            # FIXME : Commented for debug
             if not c.raw_comment : return False
-            # if len(self.namespaces)>0 :
-                # ns = CL.fully_qualified(c.referenced).rsplit('::',1)[0]
-                # return ns in self.namespaces
-            # return True
             if namespace:
                 qualified_ns = CL.get_namespace(c) 
                 if qualified_ns != namespace : return False
             return (c.location.file.name == self.filename) if self.target_file_only else True
         
         def keep_fnt(f):
+            # FIXME : Commented for debug
             if not f.raw_comment : return False
             if  f.spelling.startswith('operator') or f.spelling in ['begin','end'] : return False
             return keep_cls(f) 
@@ -131,7 +144,7 @@ class Cpp2Rst:
         # ----------------------
 
         # A list of AST nodes for classes
-        classes =CL.get_classes(self.root, keep_cls, traverse_namespaces = True, keep_ns = keep_ns)
+        classes = CL.get_classes(self.root, keep_cls, traverse_namespaces = True, keep_ns = keep_ns)
         classes = list(classes) # make a list to avoid exhaustion of the generator
   
         D = OrderedDict()
@@ -145,44 +158,54 @@ class Cpp2Rst:
             # print "CLASS", cls.fully_qualified_name 
             # print "CLASS", cls.name_for_label
             # print "CLASS", "----------------------"
-        
+       
+            assert ',' not in cls.fully_qualified_name, "Not implemented"
+            print " ... class :  %s"%cls.fully_qualified_name, cls.location
+
+            # process the doc of the class and add it to the node
+            cls.processed_doc = ProcessedDoc(cls)
+
+            # all methods and constructors
+            # we build a OrderedDict of the constructors (first) and the methods, in order of declaration 
+            constructors = list(CL.get_constructors(cls))
+            for f in constructors : f.is_constructor = True # tag them for later use
+            methods = OrderedDict()
+            if constructors: methods['constructor'] = constructors
+            methods.update(self.regroup_func_by_names(CL.get_methods(cls, True))) # True : with inherited 
+            #methods.update(self.regroup_func_by_names(CL.get_methods(cls, True, keep = keep_fnt))) # True : with inherited 
+
+            # all non member functions
+            friend_functions = self.regroup_func_by_names(CL.get_friend_functions(cls))
+            #friend_functions = self.regroup_func_by_names(CL.get_friend_functions(cls, keep = keep_fnt))
+
+            # Analyse the doc string for all methods and functions, and store the result in the node itself
+            for (n,f_list) in (methods.items() + friend_functions.items()):
+                for f in f_list:
+                    f.processed_doc = ProcessedDoc(f)
+
+            # attach to the node
+            cls.methods, cls.friend_functions = methods, friend_functions
+
         # Eliminate doublons, like forward declarations
         classes = D.values()
 
         # A list of AST nodes for the methods and functions
-        all_functions = CL.get_functions(self.root, keep_fnt, traverse_namespaces = True, keep_ns = keep_ns)
-        all_functions = list(all_functions) # make a to avoid exhaustion of the generator
+        functions = CL.get_functions(self.root, keep_fnt, traverse_namespaces = True, keep_ns = keep_ns)
+        functions = list(functions) # make a to avoid exhaustion of the generator
 
         # Analyse the doc strings 
-        for f in all_functions:
+        for f in functions:
             f.processed_doc = ProcessedDoc(f)
 
-        return classes, all_functions
+        return classes, functions
 
     # ------------------------
     
-    def run_one_ns(self, namespace, classes, all_functions):
+    def run_one_ns(self, namespace, classes, functions):
 
         # c : AST node of name A::B::C::clsname makes and cd into A/B/C
         def mkchdir_for_one_node(node): 
             mkchdir(* ( CL.fully_qualified_name(node).split('::')[:-1]))
-
-        # regroup the functions into a list of overloads
-        def regroup_func_by_names(fs):
-            """ Given a list of functions, regroup them by names in an OrderedDict. The Name will serve a filename """
-            d = OrderedDict()
-            def decay(name):
-                """Replace operator X by better names for"""
-                return name
-                # if 'operator' not in name : return name
-                # a, ca, c, co = '+ - * /',  '+= -= \*= /=',  "== !=",  r" comparison"
-                # d = {'*=' : ca,'+=' : ca,'/=' : ca,'-=' : ca,'*' : a,'+' : a,'/' : a,'-' : a, '==': c, '!=' : c, '<': co, '>' : co, '<=' : co, '>=' : co}
-                # n = name.replace('operator','').strip()
-                # return 'operator' + d[n] if n in d else name
-            for f in fs:
-                d.setdefault(decay(f.spelling),[]).append(f)
-            return d
-
 
         # First treat the class
         for c in classes:
@@ -190,33 +213,12 @@ class Cpp2Rst:
                 print "Skipping a class with an empty name !"
                 continue
 
-            print " ... class :  %s"%c.fully_qualified_name
-
-            # process the doc of the class and add it to the node
-            c.processed_doc = ProcessedDoc(c)
-
-            # all methods and constructors
-            # we build a OrderedDict of the constructors (first) and the methods, in order of declaration 
-            constructors = list(CL.get_constructors(c))
-            for f in constructors : f.is_constructor = True # tag them for later use
-            all_methods = OrderedDict()
-            if constructors: all_methods['constructor'] = constructors
-            all_methods.update(regroup_func_by_names(CL.get_methods(c, True))) # True : with inherited 
-
-            # all non member functions
-            all_friend_functions = regroup_func_by_names(CL.get_friend_functions(c))
-
-            # Analyse the doc string for all methods and functions, and store the result in the node itself
-            for (n,f_list) in (all_methods.items() + all_friend_functions.items()):
-                for f in f_list:
-                    f.processed_doc = ProcessedDoc(f)
-
             # One directory for the class : make it and cd into it
             cur_dir = os.getcwd()
             mkchdir_for_one_node(c)
 
             # the file for the class
-            r = render_cls(c, all_methods, all_friend_functions)
+            r = render_cls(c, c.methods, c.friend_functions)
             safe_write(synopsis.replace_ltgt(c.name), r)
              
             # create a directory with the class name and cd into it
@@ -229,18 +231,18 @@ class Cpp2Rst:
                     r = render_fnt(parent_class = c, f_name = f_name, f_overloads = f_overloads)
                     safe_write(f_name, r)
 
-            render('methods', all_methods)
-            render('non member functions', all_friend_functions)
+            render('methods', c.methods)
+            render('non member functions', c.friend_functions)
 
             # Change back to up directory
             os.chdir(cur_dir)
 
         # Now treat the functions
-        all_functions_by_name = regroup_func_by_names(all_functions)
+        functions_by_name = self.regroup_func_by_names(functions)
 
-        docs = dict ( (n, [ProcessedDoc(f) for f in fs]) for (n,fs) in all_functions_by_name.items())
+        docs = dict ( (n, [ProcessedDoc(f) for f in fs]) for (n,fs) in functions_by_name.items())
 
-        for f_name, f_overloads in all_functions_by_name.items():
+        for f_name, f_overloads in functions_by_name.items():
             print " ... function " + f_name, "      [", f_overloads[0].location.file.name, ']'
             cur_dir = os.getcwd()
             mkchdir_for_one_node(f_overloads[0])
@@ -253,7 +255,7 @@ class Cpp2Rst:
         mkchdir(*namespace.split('::')[:-1])
 
         ns = namespace.split('::',1)[1]
-        r = render_ns(ns, all_functions_by_name, classes)
+        r = render_ns(ns, functions_by_name, classes)
         safe_write(ns, r)
 
         os.chdir(cur_dir)
