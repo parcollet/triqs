@@ -1,78 +1,108 @@
 #include <Python.h>
 #include <numpy/arrayobject.h>
 
-#include "./python.hpp"
 #include "./group.hpp"
 #include "./scalar.hpp"
 #include "./string.hpp"
 #include "./array_interface.hpp"
-#include <map>
+#include "./python.hpp"
 
 namespace h5 {
 
-  // C Type -> Numpy Type
-  std::map<std::type_index, int> _C_2_py;
+  struct h5_c_size_t {
+    datatype hdf5_type; // type in hdf5
+    int c_size;         // size of the corresponding C object
+  };
 
-  // Ctype -> size of this type
-  std::map<std::type_index, int> C_size;
+  std::vector<h5_c_size_t> h5_c_size_table;
 
-  // Numpy Type -> C type
-  std::map<int, std::type_index> _py_2_C;
+  static void init_h5_c_size_table() {
+    h5_c_size_table = std::vector<h5_c_size_t>{
+       {hdf5_type<bool>, sizeof(bool)},
+       {hdf5_type<char>, sizeof(char)},
+       {hdf5_type<signed char>, sizeof(signed char)},
+       {hdf5_type<unsigned char>, sizeof(unsigned char)},
+       {hdf5_type<short>, sizeof(short)},
+       {hdf5_type<unsigned short>, sizeof(unsigned short)},
+       {hdf5_type<int>, sizeof(int)},
+       {hdf5_type<unsigned int>, sizeof(unsigned int)},
+       {hdf5_type<long>, sizeof(long)},
+       {hdf5_type<unsigned long>, sizeof(unsigned long)},
+       {hdf5_type<long long>, sizeof(long long)},
+       {hdf5_type<unsigned long long>, sizeof(unsigned long long)},
+       {hdf5_type<float>, sizeof(float)},
+       {hdf5_type<double>, sizeof(double)},
+       {hdf5_type<long double>, sizeof(long double)},
+       {hdf5_type<std::complex<float>>, sizeof(std::complex<float>)},
+       {hdf5_type<std::complex<double>>, sizeof(std::complex<double>)},
+       {hdf5_type<std::complex<long double>>, sizeof(std::complex<long double>)} //
+    };
+  }
 
-  // fill the table for a type T
-  void _register2(std::type_info const &ctype, int size, int pytype) {
-    auto ty         = std::type_index(ctype);
-    _C_2_py[ty]     = pytype;
-    _py_2_C.insert(std::make_pair(pytype, ty));
-    C_size[ty]      = size;
+  // h5 -> numpy type conversion
+  //FIXME we could sort the table and use binary_search
+  int h5_c_size(datatype t) {
+    if (h5_c_size_table.empty()) init_h5_c_size_table();
+    auto _end = h5_c_size_table.end();
+    auto pos  = std::find_if(h5_c_size_table.begin(), _end, [](auto const &x) { return x.hdf5_type == t; });
+    if (pos == _end) std::runtime_error("HDF5/Python Internal Error : can not find the numpy type from the HDF5 type");
+    return pos->c_size;
+  }
+
+  //---------------------------------------
+
+  struct h5_py_type_t {
+    datatype hdf5_type;   // type in hdf5
+    NPY_TYPES numpy_type; // For a Python object, we will always use the numpy type
+  };
+
+  std::vector<h5_py_type_t> h5_py_type_table;
+
+  static void init_h5py() {
+    h5_py_type_table = std::vector<h5_py_type_t>{
+       {hdf5_type<bool>, NPY_BOOL, sizeof(bool)},
+       {hdf5_type<char>, NPY_STRING, sizeof(char)},
+       {hdf5_type<signed char>, NPY_BYTE, sizeof(signed char)},
+       {hdf5_type<unsigned char>, NPY_UBYTE, sizeof(unsigned char)},
+       {hdf5_type<short>, NPY_SHORT, sizeof(short)},
+       {hdf5_type<unsigned short>, NPY_USHORT, sizeof(unsigned short)},
+       {hdf5_type<int>, NPY_INT, sizeof(int)},
+       {hdf5_type<unsigned int>, NPY_UINT, sizeof(unsigned int)},
+       {hdf5_type<long>, NPY_LONG, sizeof(long)},
+       {hdf5_type<unsigned long>, NPY_ULONG, sizeof(unsigned long)},
+       {hdf5_type<long long>, NPY_LONGLONG, sizeof(long long)},
+       {hdf5_type<unsigned long long>, NPY_ULONGLONG, sizeof(unsigned long long)},
+       {hdf5_type<float>, NPY_FLOAT, sizeof(float)},
+       {hdf5_type<double>, NPY_DOUBLE, sizeof(double)},
+       {hdf5_type<long double>, NPY_LONGDOUBLE, sizeof(long double)},
+       {hdf5_type<std::complex<float>>, NPY_CFLOAT, sizeof(std::complex<float>)},
+       {hdf5_type<std::complex<double>>, NPY_CDOUBLE, sizeof(std::complex<double>)},
+       {hdf5_type<std::complex<long double>>, NPY_CLONGDOUBLE, sizeof(std::complex<long double>)} //
+    };
+  }
+
+  // h5 -> numpy type conversion
+  NPY_TYPES h5_to_npy(datatype t) {
+    if (h5_py_type_table.empty()) init_h5py();
+    auto _end = h5_py_type_table.end();
+    auto pos  = std::find_if(h5_py_type_table.begin(), _end, [](auto const &x) { return x.hdf5_type == t; });
+    if (pos == _end) std::runtime_error("HDF5/Python Internal Error : can not find the numpy type from the HDF5 type");
+    return pos->numpy_type;
+  }
+
+  // numpy -> h5 type conversion
+  datatype npy_to_h5(NPY_TYPES t) {
+    if (h5_py_type_table.empty()) init_h5py();
+    auto _end = h5_py_type_table.end();
+    auto pos  = std::find_if(h5_py_type_table.begin(), _end, [](auto const &x) { return x.numpy_type == t; });
+    if (pos == _end) std::runtime_error("HDF5/Python Internal Error : can not find the numpy type from the HDF5 type");
+    return pos->hdf5_type;
   }
 
   //--------------------------------------
 
-  static void _init() {
-    _register2(typeid(bool), sizeof(bool), NPY_BOOL);
-    _register2(typeid(char), sizeof(char), NPY_STRING);
-    _register2(typeid(signed char), sizeof(signed char), NPY_BYTE);
-    _register2(typeid(unsigned char), sizeof(unsigned char), NPY_UBYTE);
-    _register2(typeid(short), sizeof(short), NPY_SHORT);
-    _register2(typeid(unsigned short), sizeof(unsigned short), NPY_USHORT);
-    _register2(typeid(int), sizeof(int), NPY_INT);
-    _register2(typeid(unsigned int), sizeof(unsigned int), NPY_UINT);
-    _register2(typeid(long), sizeof(long), NPY_LONG);
-    _register2(typeid(unsigned long), sizeof(unsigned long), NPY_ULONG);
-    _register2(typeid(long long), sizeof(long long), NPY_LONGLONG);
-    _register2(typeid(unsigned long long), sizeof(unsigned long long), NPY_ULONGLONG);
-    _register2(typeid(float), sizeof(float), NPY_FLOAT);
-    _register2(typeid(double), sizeof(double), NPY_DOUBLE);
-    _register2(typeid(long double), sizeof(long double), NPY_LONGDOUBLE);
-    _register2(typeid(std::complex<float>), sizeof(std::complex<float>), NPY_CFLOAT);
-    _register2(typeid(std::complex<double>), sizeof(std::complex<double>), NPY_CDOUBLE);
-    _register2(typeid(std::complex<long double>), sizeof(std::complex<long double>), NPY_CLONGDOUBLE);
-  }
-
-  //--------------------------------------
-
-  // C -> Py + control
-  static int C_2_py(std::type_index const &ty) {
-    if (_C_2_py.empty()) _init();
-    auto pos = _C_2_py.find(ty);
-    if (pos == _C_2_py.end()) H5_ERROR << "C++ not recognized";
-    return pos->second;
-  }
-
-  //--------------------------------------
-
-  // py -> C + control
-  static std::type_index py_2_C(int ty) {
-    if (_py_2_C.empty()) _init();
-    auto pos = _py_2_C.find(ty);
-    if (pos == _py_2_C.end()) H5_ERROR << "Python type not recognized";
-    return pos->second;
-  }
-
-  // -------------------------
-
-  static h5_array_view make_av_from_py(std::type_index const &ty, PyArrayObject *arr_obj) {
+  // Make a h5_array_view from the numpy object
+  static h5_array_view make_av_from_py(datatype dt, PyArrayObject *arr_obj) {
 
 #ifdef PYTHON_NUMPY_VERSION_LT_17
     int rank         = arr_obj->nd;
@@ -81,22 +111,31 @@ namespace h5 {
     int rank         = PyArray_NDIM(arr_obj);
     const size_t dim = PyArray_NDIM(arr_obj); // we know that dim == rank
 #endif
-    std::vector<long> lengths(dim), strides(dim);
+    v_t lengths(dim), strides(dim);
     for (size_t i = 0; i < dim; ++i) {
 #ifdef PYTHON_NUMPY_VERSION_LT_17
       lengths[i] = size_t(arr_obj->dimensions[i]);
-      strides[i] = std::ptrdiff_t(arr_obj->strides[i]) / C_size[ty];
+      strides[i] = std::ptrdiff_t(arr_obj->strides[i]) / h5_c_size(dt);
 #else
       lengths[i]       = size_t(PyArray_DIMS(arr_obj)[i]);
-      strides[i]       = std::ptrdiff_t(PyArray_STRIDES(arr_obj)[i]) / C_size[ty];
+      strides[i]       = std::ptrdiff_t(PyArray_STRIDES(arr_obj)[i]) / h5_c_size(dt);
 #endif
     }
-    return {ty, PyArray_DATA(arr_obj), std::move(lengths), std::move(strides)};
+    return h5_array_view{
+       PyArray_DATA(arr_obj), // start
+       dt,                    // hdf5 type
+       {
+          0, // offset
+          std::move(strides),
+          std::move(lengths),
+          {} // blocks
+       }     // slab
+    };
   }
 
   // -------------------------
 
-  void _write(group g, std::string const &name, PyObject *ob) {
+  void write(group g, std::string const &name, PyObject *ob) {
 
     // if numpy
     if (PyArray_Check(ob)) {
@@ -106,65 +145,63 @@ namespace h5 {
 #else
       int elementsType = PyArray_DESCR(arr_obj)->type_num;
 #endif
-      std::type_index ty = py_2_C(elementsType);
-      _write(g, name, make_av_from_py(ty, arr_obj));
+      datatype ty = npy_to_h5(elementsType);
+      write(g, name, make_av_from_py(ty, arr_obj));
+    } else if (PyFloat_Check(ob)) {
+      h5_write(g, name, PyFloat_AsDouble(ob));
+    } else if (PyLong_Check(ob)) {
+      h5_write(g, name, PyLong_AsLong(ob));
+    } else if (PyString_Check(ob)) {
+      h5_write(g, name, (const char *)PyString_AsString(ob));
+    } else if (PyComplex_Check(ob)) {
+      h5_write(g, name, std::complex<double>{PyComplex_RealAsDouble(ob), PyComplex_ImagAsDouble(ob)});
     } else {
-      if (PyFloat_Check(ob)) {
-        h5_write(g, name, PyFloat_AsDouble(ob));
-      } else if (PyLong_Check(ob)) {
-        h5_write(g, name, PyLong_AsLong(ob));
-      } else if (PyString_Check(ob)) {
-        h5_write(g, name, (const char *)PyString_AsString(ob));
-      } else if (PyComplex_Check(ob)) {
-        h5_write(g, name, std::complex<double>{PyComplex_RealAsDouble(ob), PyComplex_ImagAsDouble(ob)});
-      }
+      // Error !
+      PyErr_SetString(PyExc_RuntimeError, "The Python object can not be written in HDF5");
     }
-  } // namespace h5
+  }
 
   // -------------------------
 
-  void _read(group g, std::string const &name, PyObject *&ob) {
-
-    ob = NULL; // default result
+  PyObject *read(group g, std::string const &name) noexcept { // There should be no errors from h5 reading
 
     h5_lengths_type lt = get_lengths_and_h5type(g, name);
 
     if (lt.rank() == 0) { // it is a scalar
-      if (lt.ty == typeid(double)) {
+      if (lt.ty == hdf5_type<double>) {
         double x;
         h5_read(g, name, x);
-        ob = PyFloat_FromDouble(x);
-      } else if (lt.ty == typeid(long)) { // or other int ...
+        return PyFloat_FromDouble(x);
+      }
+      if (lt.ty == hdf5_type<long>) { // or other int ...
         long x;
         h5_read(g, name, x);
-        ob = PyLong_FromLong(x);
-      } else if (lt.ty == typeid(std::string)) {
+        return PyLong_FromLong(x);
+      }
+      if (lt.ty == hdf5_type<std::string>) {
         std::string x;
         h5_read(g, name, x);
-        ob = PyString_FromString(x.c_str());
-      } else if (lt.ty == typeid(std::complex<double>)) {
+        return PyString_FromString(x.c_str());
+      }
+      if (lt.ty == hdf5_type<std::complex<double>>) {
         std::complex<double> x;
         h5_read(g, name, x);
-        ob = PyComplex_FromDoubles(x.real(), x.imag());
+        return PyComplex_FromDoubles(x.real(), x.imag());
       }
-
-    } else {
-      std::vector<npy_intp> L(lt.rank()); // check
-      std::copy(lt.lengths.begin(), lt.lengths.end(), L.begin());
-      int elementsType = C_2_py(lt.ty);
-
-      ob = PyArray_SimpleNewFromDescr(int(L.size()), &L[0], PyArray_DescrFromType(elementsType));
-
-      if (!ob) {
-        if (PyErr_Occurred()) {
-          PyErr_Print();
-          PyErr_Clear();
-        }
-        H5_ERROR << "Read a numpy from h5. Object can not be build";
-      }
-
-      _read(g, name, make_av_from_py(lt.ty, (PyArrayObject*)ob), lt);
+      std::abort(); // WE SHOULD COVER all types
     }
+    // it is an array
+    std::vector<npy_intp> L(lt.rank());                         // check
+    std::copy(lt.lengths.begin(), lt.lengths.end(), L.begin()); //npy_intp and size_t may differ, so I can not use =
+    int elementsType = h5_to_npy(lt.ty);
+
+    // make a new numpy array
+    ob = PyArray_SimpleNewFromDescr(int(L.size()), &L[0], PyArray_DescrFromType(elementsType));
+    // leave the error set up in Python if any
+
+    // read from the file
+    // CATCH error
+    read(g, name, make_av_from_py(lt.ty, (PyArrayObject *)ob), lt);
   }
 
 } // namespace h5

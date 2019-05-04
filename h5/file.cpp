@@ -3,62 +3,32 @@
 #include <hdf5_hl.h>
 #include <vector>
 
+using namespace std::string_literals;
+
+#define CHECK_OR_THROW(Cond, Mess)                                                                                                                   \
+  if (!(Cond)) throw std::runtime_error("Error in h5 (de)serialization "s + Mess);
+
 namespace h5 {
 
-  namespace {
-    unsigned h5_char_to_int(char fl) {
-      switch (fl) {
-        case 'r': return H5F_ACC_RDONLY;
-        case 'w': return H5F_ACC_TRUNC;
-        case 'a': return H5F_ACC_RDWR;
-      }
-      H5_ERROR << " Internal error";
-    }
-  } // namespace
+  file::file(const char *name, char mode) {
 
-  file::file(const char *name, char flags) : file(name, h5_char_to_int(flags)) {}
+    switch (mode) {
+      case 'r': id = H5Fopen(name, H5F_ACC_RDONLY, H5P_DEFAULT); break;
 
-  file::file(const char *name, unsigned flags) {
+      case 'w': id = H5Fcreate(name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT); break;
 
-    if (flags == H5F_ACC_RDONLY) {
-      id = H5Fopen(name, flags, H5P_DEFAULT);
-      if (id < 0) H5_ERROR << "HDF5 : cannot open file " << name;
-      return;
+      case 'a': id = H5Fopen(name, H5F_ACC_RDWR, H5P_DEFAULT); break;
+      case 'e': id = H5Fopen(name, H5F_ACC_EXCL, H5P_DEFAULT); break;
+      default: throw std::runtime_error("HDF5 file opening : mode is not r, w, a, e. Cf documentation");
     }
 
-    if (flags == H5F_ACC_RDWR) {
-      id = H5Fopen(name, flags, H5P_DEFAULT);
-      if (id < 0) {
-        id = H5Fcreate(name, H5F_ACC_EXCL, H5P_DEFAULT, H5P_DEFAULT);
-        if (id < 0) H5_ERROR << "HDF5 : cannot open file " << name;
-      }
-      return;
-    }
-
-    if (flags == H5F_ACC_TRUNC) {
-      id = H5Fcreate(name, flags, H5P_DEFAULT, H5P_DEFAULT);
-      if (id < 0) H5_ERROR << "HDF5 : cannot create file " << name;
-      return;
-    }
-
-    if (flags == H5F_ACC_EXCL) {
-      id = H5Fcreate(name, flags, H5P_DEFAULT, H5P_DEFAULT);
-      if (id < 0) H5_ERROR << "HDF5 : cannot create file " << name << ". Does it exists ?";
-      return;
-    }
-
-    H5_ERROR << "HDF5 file opening : flag not recognized";
+    if (id < 0) throw std::runtime_error("HDF5 : cannot "s + (((mode == 'r') or (mode == 'a')) ? "open" : "create") + "file : "s + name);
   }
 
   //---------------------------------------------
 
   file::file(hid_t id_) : h5_object(h5_object(id_)) {}
 
-  /*file::file(h5_object obj) : h5_object(std::move(obj)) {
-    if (!H5Iis_valid(this->id)) H5_ERROR << "Invalid input in h5::file constructor from id";
-    if (H5Iget_type(this->id) != H5I_FILE) H5_ERROR << "h5::file constructor must take the id of a file ";
-  }
-*/
   //---------------------------------------------
 
   std::string file::name() const { // same function as for group
@@ -113,7 +83,7 @@ namespace h5 {
 
   std::vector<unsigned char> memory_file::as_buffer() const {
 
-    auto f = hid_t(*this);
+    auto f   = hid_t(*this);
     auto err = H5Fflush(f, H5F_SCOPE_GLOBAL);
     CHECK_OR_THROW((err >= 0), "flushed core file.");
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "./file.hpp"
+#include "./scheme.hpp"
 
 namespace h5 {
 
@@ -36,7 +37,7 @@ namespace h5 {
     void write_hdf5_scheme_as_string(const char *a);
 
     /// Write the triqs tag of the group if it is an object.
-    template <typename T> void write_hdf5_scheme(T const &obj) { write_hdf5_scheme_as_string(get_hdf5_scheme<T>().c_str()); }
+    template <typename T> void write_hdf5_scheme(T const &obj) { write_hdf5_scheme_as_string(::h5::get_hdf5_scheme<T>().c_str()); }
 
     /// Read the triqs tag of the group if it is an object. Returns the empty string "" if attribute is not present
     std::string read_hdf5_scheme() const;
@@ -80,7 +81,6 @@ namespace h5 {
    * NB : It unlinks the dataset if it exists.
    */
     dataset create_dataset(std::string const &key, datatype ty, dataspace sp, hid_t pl) const;
-
 
     /**
    * \brief Create a dataset.

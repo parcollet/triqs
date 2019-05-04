@@ -31,18 +31,20 @@ execute_process(COMMAND ${HDF5_DIFF_EXECUTABLE} --version OUTPUT_VARIABLE diff_o
 string(REGEX MATCHALL "[0-9]+.[0-9]+.[0-9]+" HDF5_VERSION "${diff_output}")
 message(STATUS "hdf5 version: ${HDF5_VERSION}")
 
-add_library(hdf5 INTERFACE)
-target_include_directories(hdf5 SYSTEM INTERFACE ${HDF5_INCLUDE_DIRS})
-target_link_libraries(hdf5 INTERFACE ${HDF5_LIBRARIES})
-target_compile_options(hdf5 INTERFACE ${HDF5_DEFINITIONS})
+add_library(__hdf5 INTERFACE)
+target_include_directories(__hdf5 SYSTEM INTERFACE ${HDF5_INCLUDE_DIRS})
+target_link_libraries(__hdf5 INTERFACE ${HDF5_LIBRARIES})
+target_compile_options(__hdf5 INTERFACE ${HDF5_DEFINITIONS})
 
 # -------- Now build our interface -------------------------------
 
 
 add_library(h5_interface h5object.cpp file.cpp group.cpp 
-                         array_interface.cpp type_correspondance.cpp
+			 array_interface.cpp type_correspondance.cpp
                          string.cpp vector.cpp  
-			 python.cpp)
+			 )
 
-target_link_libraries(h5_interface PRIVATE hdf5)
-			 
+target_link_libraries(h5_interface PRIVATE __hdf5 )
+target_compile_options(h5_interface PUBLIC -std=c++17)
+
+
