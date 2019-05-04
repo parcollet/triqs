@@ -182,6 +182,12 @@ endif()
 
 add_subdirectory(google_test)
 
+#------------------------
+# Build hdf5 interface
+#------------------------
+add_subdirectory(h5)
+
+
 # -----------------------------------------------------------------------------
 # Common option for all targets below (triqs lib, test, pytriqs, doc examples)
 # -----------------------------------------------------------------------------
