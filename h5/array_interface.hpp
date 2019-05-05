@@ -21,16 +21,16 @@ namespace h5::details {
   // http://davis.lbl.gov/Manuals/HDF5-1.8.7/UG/12_Dataspaces.html
   struct hyperslab {
     v_t offset; // offset of the pointer from the start of data
-    v_t stride; // stride (in the HDF5 sense). 1 if contiguous. Always >0
-    v_t count;  //length in each direction
-    v_t block;  //block in each direction
+    v_t stride; // stride in each dimension (in the HDF5 sense). 1 if contiguous. Always >0.
+    v_t count;  // length in each dimension
+    v_t block;  // block in each dimension
 
     // Construct with proper size
     hyperslab(int rank, bool is_complex)
        : offset(rank + is_complex), stride(rank + is_complex), count(rank + is_complex), block() { // block is often unused
       if (is_complex) {
-        stride[rank - 1] = 1;
-        count[rank - 1]  = 2;
+        stride[rank] = 1;
+        count[rank]  = 2;
       }
     }
   };
@@ -38,10 +38,10 @@ namespace h5::details {
   // Stores a view of an array.
   // scalar are array of rank 0, lengths, strides are empty, rank is 0, start is the scalar
   struct h5_array_view {
-    void *start;             // start of data. It MUST be a pointer of T* with ty = hdf5_type<T>
     datatype ty;             // HDF5 type
-    bool is_complex = false; //
-    hyperslab slab;          //  
+    void *start;             // start of data. It MUST be a pointer of T* with ty = hdf5_type<T>
+    bool is_complex = false; // If true, ty is a double, and the slab has an additional dimension of size 2.
+    hyperslab slab;          // 
 
     // Construct with proper size
     h5_array_view(int rank, void *start, bool is_complex) : start(start), is_complex(is_complex), slab(rank, is_complex) {}
