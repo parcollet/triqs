@@ -1,25 +1,4 @@
-#pragma once
-
-namespace h5 {
-
-  // FIXME : scalar by default ?
-  template <typename T> struct io {
-    static std::string scheme();
-
-    static void write(group g, std::string const &name, T const &);
-    static void read(group g, std::string const &name, T &);
-
-    static void write_attribute(group g, std::string const &name, T const &);
-    static void read_attribute(group g, std::string const &name, T &);
-
-    static T h5_read_construct(group g, std::string const &name);
-  };
-
-  template <typename T> void h5_write(group g, std::string const &name, T const &x) { io<T>::write(g, name, x); }
-  template <typename T> void h5_read(group g, std::string const &name, T &x) { io<T>::read(g, name, x); }
-
-  template <typename T> void h5_write_attribute(group g, std::string const &name, T const &x) { io<T>::write_attribute(g, name, x); }
-  template <typename T> void h5_read_attribute(group g, std::string const &name, T &x) { io<T>::read_attribute(g, name, x); }
+namespace h5 { 
 
   // a class T has either :
   //  1- a static member hdf5_scheme -> std::string (or a constexpr char * ?)
@@ -31,12 +10,17 @@ namespace h5 {
   //  specialize with a struct similarly to hdf5_scheme_impl
   // to be implemented if needed.
 
-  // FIXME : faire une function SIMPLE <> + specialzaiton 
+  template <typename T> struct hdf5_scheme_impl {
+    static std::string invoke() { return T::hdf5_scheme(); }
+  };
+
 #define AS_STRING(X) AS_STRING2(X)
 #define AS_STRING2(X) #X
 
 #define TRIQS_SPECIALIZE_HDF5_SCHEME2(X, Y)                                                                                                          \
-  template <> std::string io<X>::scheme<X>() { return AS_STRING(Y); }
+  template <> struct hdf5_scheme_impl<X> {                                                                                                           \
+    static std::string invoke() { return AS_STRING(Y); }                                                                                             \
+  };
 
 #define TRIQS_SPECIALIZE_HDF5_SCHEME(X) TRIQS_SPECIALIZE_HDF5_SCHEME2(X, X)
 
@@ -52,6 +36,6 @@ namespace h5 {
   TRIQS_SPECIALIZE_HDF5_SCHEME(long double);
   TRIQS_SPECIALIZE_HDF5_SCHEME2(std::complex<double>, complex);
 
-  template <typename T> std::string get_hdf5_scheme() { return io<T>::scheme(); }
+  template <typename T> std::string get_hdf5_scheme() { return hdf5_scheme_impl<T>::invoke(); }
 
-} // namespace h5
+}
