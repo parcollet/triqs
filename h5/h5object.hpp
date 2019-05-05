@@ -8,6 +8,7 @@ namespace h5 {
   // Hence complex installation paths to hdf5 are only needed in the cpp file,
   // not by the users of the library.
   using hid_t = int64_t;
+  using hsize_t = unsigned long long;
 
   // Correspondance T -> hdf5 type
   template<typename T> hid_t hdf5_type;

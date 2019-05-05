@@ -12,6 +12,7 @@ static_assert(std::is_same_v<hid_t, int64_t>, "Configuration error in HDF5. Chec
 namespace h5 {
 
   static_assert(std::is_same<::hid_t, hid_t>::value, "Internal error");
+  static_assert(std::is_same<::hsize_t, hsize_t>::value, "Internal error");
 
   // specializations for all basic types
   template <> hid_t hdf5_type<char>          = H5T_NATIVE_CHAR;
@@ -32,8 +33,8 @@ namespace h5 {
   template <> hid_t hdf5_type<double>      = H5T_NATIVE_DOUBLE;
   template <> hid_t hdf5_type<long double> = H5T_NATIVE_LDOUBLE;
 
-  // complex double is like a double, but another ID to differentiate them. Never dereferenced.
-  template <> hid_t hdf5_type<std::complex<double>> = H5Tcopy(H5T_NATIVE_DOUBLE);
+  // FIXME complex double is like a double, but another ID to differentiate them. Never dereferenced.
+  template <> hid_t hdf5_type<std::complex<double>> = H5T_NATIVE_DOUBLE; //H5Tcopy(H5T_NATIVE_DOUBLE);
 
   // bool. Use a lambda to initialize it.
   template <>

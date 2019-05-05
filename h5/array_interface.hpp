@@ -6,7 +6,7 @@
 
 namespace h5::details {
 
-  using v_t = std::vector<size_t>;
+  using v_t = std::vector<hsize_t>;
 
   // Stores the hdf5 type and the dims
   struct h5_lengths_type {
@@ -21,9 +21,18 @@ namespace h5::details {
   // http://davis.lbl.gov/Manuals/HDF5-1.8.7/UG/12_Dataspaces.html
   struct hyperslab {
     v_t offset; // offset of the pointer from the start of data
-    v_t stride; // stride (in the HDF5 sense)
+    v_t stride; // stride (in the HDF5 sense). 1 if contiguous. Always >0
     v_t count;  //length in each direction
     v_t block;  //block in each direction
+
+    // Construct with proper size
+    hyperslab(int rank, bool is_complex)
+       : offset(rank + is_complex), stride(rank + is_complex), count(rank + is_complex), block() { // block is often unused
+      if (is_complex) {
+        stride[rank - 1] = 1;
+        count[rank - 1]  = 2;
+      }
+    }
   };
 
   // Stores a view of an array.
@@ -32,7 +41,10 @@ namespace h5::details {
     void *start;             // start of data. It MUST be a pointer of T* with ty = hdf5_type<T>
     datatype ty;             // HDF5 type
     bool is_complex = false; //
-    hyperslab slab;
+    hyperslab slab;          //  
+
+    // Construct with proper size
+    h5_array_view(int rank, void *start, bool is_complex) : start(start), is_complex(is_complex), slab(rank, is_complex) {}
 
     int rank() const { return slab.count.size(); }
   };

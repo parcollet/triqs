@@ -40,7 +40,7 @@ target_compile_options(__hdf5 INTERFACE ${HDF5_DEFINITIONS})
 
 
 add_library(h5_interface h5object.cpp file.cpp group.cpp 
-			 array_interface.cpp type_correspondance.cpp
+			 array_interface.cpp
                          string.cpp vector.cpp  
 			 )
 

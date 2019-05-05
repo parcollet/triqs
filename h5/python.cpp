@@ -102,35 +102,31 @@ namespace h5 {
   //--------------------------------------
 
   // Make a h5_array_view from the numpy object
-  static h5_array_view make_av_from_py(datatype dt, PyArrayObject *arr_obj) {
+  static h5_array_view make_av_from_py(PyArrayObject *arr_obj) {
 
 #ifdef PYTHON_NUMPY_VERSION_LT_17
+    int elementsType = arr_obj->descr->type_num;
     int rank         = arr_obj->nd;
-    const size_t dim = arr_obj->nd; // we know that dim == rank
 #else
+    int elementsType = PyArray_DESCR(arr_obj)->type_num;
     int rank         = PyArray_NDIM(arr_obj);
-    const size_t dim = PyArray_NDIM(arr_obj); // we know that dim == rank
 #endif
-    v_t lengths(dim), strides(dim);
-    for (size_t i = 0; i < dim; ++i) {
+    datatype dt     = npy_to_h5(elementsType);
+    bool is_complex = (elementsType == NPY_CDOUBLE) or (elementsType == NPY_CLONGDOUBLE) or (elementsType == NPY_FLOAT);
+
+    h5_array_view res{rank, PyArray_DATA(arr_obj), is_complex};
+
+    for (int i = 0; i < rank; ++i) {
 #ifdef PYTHON_NUMPY_VERSION_LT_17
-      lengths[i] = size_t(arr_obj->dimensions[i]);
-      strides[i] = std::ptrdiff_t(arr_obj->strides[i]) / h5_c_size(dt);
+      res.slab.count[i] = size_t(arr_obj->dimensions[i]);
+      res.slab.stride[i] = std::ptrdiff_t(arr_obj->strides[i]) / h5_c_size(dt);
 #else
-      lengths[i]       = size_t(PyArray_DIMS(arr_obj)[i]);
-      strides[i]       = std::ptrdiff_t(PyArray_STRIDES(arr_obj)[i]) / h5_c_size(dt);
+      res.slab.count[i] = size_t(PyArray_DIMS(arr_obj)[i]);
+      res.slab.stride[i] = std::ptrdiff_t(PyArray_STRIDES(arr_obj)[i]) / h5_c_size(dt);
 #endif
     }
-    return h5_array_view{
-       PyArray_DATA(arr_obj), // start
-       dt,                    // hdf5 type
-       {
-          0, // offset
-          std::move(strides),
-          std::move(lengths),
-          {} // blocks
-       }     // slab
-    };
+
+    return res;
   }
 
   // -------------------------
@@ -140,13 +136,7 @@ namespace h5 {
     // if numpy
     if (PyArray_Check(ob)) {
       PyArrayObject *arr_obj = (PyArrayObject *)ob;
-#ifdef PYTHON_NUMPY_VERSION_LT_17
-      int elementsType = arr_obj->descr->type_num;
-#else
-      int elementsType = PyArray_DESCR(arr_obj)->type_num;
-#endif
-      datatype ty = npy_to_h5(elementsType);
-      write(g, name, make_av_from_py(ty, arr_obj));
+      write(g, name, make_av_from_py(arr_obj));
     } else if (PyFloat_Check(ob)) {
       h5_write(g, name, PyFloat_AsDouble(ob));
     } else if (PyLong_Check(ob)) {

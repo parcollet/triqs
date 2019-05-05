@@ -6,51 +6,23 @@
 
 namespace h5::details {
 
-  std::string get_name_of_h5_type(hid_t ty) { 
+  std::string get_name_of_h5_type(hid_t ty) {
 
-   return std::to_string(ty); // FIXME : implement a table hid_t -> name
-
-  }
-
-  //------------------------------------------------
-
-  // dataspace from lengths and strides. Correct for the complex. strides must be >0
-  dataspace dataspace_from_LS(int R, bool is_complex, hsize_t const *Ltot, hsize_t const *L, hsize_t const *S, hsize_t const *offset) {
-    int rank = R + (is_complex ? 1 : 0);
-    hsize_t totdimsf[rank], dimsf[rank], stridesf[rank], offsetf[rank]; // dataset dimensions
-    for (size_t u = 0; u < R; ++u) {
-      offsetf[u]  = (offset ? offset[u] : 0);
-      dimsf[u]    = L[u];
-      totdimsf[u] = Ltot[u];
-      stridesf[u] = S[u];
-    }
-    if (is_complex) {
-      offsetf[rank - 1]  = 0;
-      dimsf[rank - 1]    = 2;
-      totdimsf[rank - 1] = 2;
-      stridesf[rank - 1] = 1;
-    }
-
-    dataspace ds = H5Screate_simple(rank, totdimsf, NULL);
-    if (!ds.is_valid()) throw std::runtime_error("Cannot create the dataset");
-
-    herr_t err = H5Sselect_hyperslab(ds, H5S_SELECT_SET, offsetf, stridesf, dimsf, NULL);
-    if (err < 0) throw std::runtime_error("Cannot set hyperslab");
-
-    return ds;
+    return std::to_string(ty); // FIXME : implement a table hid_t -> name
   }
 
   //------------------------------------------------
   // the dataspace corresponding to the array. Contiguous data only...
   dataspace get_data_space(h5_array_view const &v) {
-    int R = v.rank();
-    hsize_t L[R], S[R];
-    for (int u = 0; u < R; ++u) {
-      if (v.slab.stride[u] < 0) throw std::runtime_error(" negative strides not permitted in h5");
-      S[u] = 1;
-      L[u] = v.slab.count[u];
-    }
-    return dataspace_from_LS(R, v.is_complex, L, L, S, NULL);
+
+    dataspace ds = H5Screate_simple(v.slab.count.size(), v.slab.count.data(), NULL);
+    if (!ds.is_valid()) throw std::runtime_error("Cannot create the dataset");
+
+    herr_t err = H5Sselect_hyperslab(ds, H5S_SELECT_SET, v.slab.offset.data(), v.slab.stride.data(), v.slab.count.data(),
+                                     (v.slab.block.empty() ? nullptr : v.slab.block.data()));
+    if (err < 0) throw std::runtime_error("Cannot set hyperslab");
+
+    return ds;
   }
 
   //--------------------------------------------------------
@@ -68,7 +40,7 @@ namespace h5::details {
     if (!is_scalar) { // if we wish to compress, yes by default ?
       int n_dims = a.rank() + (_is_complex ? 1 : 0);
       hsize_t chunk_dims[n_dims];
-      for (int i = 0; i < a.rank(); ++i) chunk_dims[i] = std::max(a.slab.count[i], 1ul);
+      for (int i = 0; i < a.rank(); ++i) chunk_dims[i] = std::max(a.slab.count[i], hsize_t{1});
       if (_is_complex) chunk_dims[n_dims - 1] = 2;
       cparms = H5Pcreate(H5P_DATASET_CREATE);
       H5Pset_chunk(cparms, n_dims, chunk_dims);
@@ -113,7 +85,7 @@ namespace h5::details {
 
     dataset ds = g.open_dataset(name);
 
-    bool is_complex   = H5LTfind_attribute(ds, "__complex__"); // the array in file is complex
+    bool is_complex   = H5LTfind_attribute(ds, "__complex__"); // the array in file should be interpreted as a complex
     dataspace d_space = H5Dget_space(ds);
     int rank_in_file  = H5Sget_simple_extent_ndims(d_space);
     int rank          = rank_in_file - (is_complex ? 1 : 0);
@@ -126,7 +98,7 @@ namespace h5::details {
 
     //  get the type from the file
     datatype ty = H5Dget_type(ds);
-    return {std::move(res),ty, is_complex};
+    return {std::move(res), ty, is_complex};
   }
 
   //--------------------------------------------------------
