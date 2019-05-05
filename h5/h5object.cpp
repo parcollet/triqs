@@ -34,7 +34,7 @@ namespace h5 {
   template <> hid_t hdf5_type<long double> = H5T_NATIVE_LDOUBLE;
 
   // FIXME complex double is like a double, but another ID to differentiate them. Never dereferenced.
-  template <> hid_t hdf5_type<std::complex<double>> = H5T_NATIVE_DOUBLE; //H5Tcopy(H5T_NATIVE_DOUBLE);
+  template <> hid_t hdf5_type<std::complex<double>> = H5Tcopy(H5T_NATIVE_DOUBLE);
 
   // bool. Use a lambda to initialize it.
   template <>
@@ -45,6 +45,11 @@ namespace h5 {
     H5Tenum_insert(bool_enum_h5type, "TRUE", (val = 1, &val));
     return bool_enum_h5type;
   }();
+
+  //----------------------------------
+
+  // a simple function to tell if dt is complex (it is a copy, hence not == but H5Tequal is true)
+  bool is_complex(hid_t dt) { return H5Tequal(dt, H5T_NATIVE_DOUBLE) and (dt == H5T_NATIVE_DOUBLE); }
 
   // -----------------------   Reference counting ---------------------------
 

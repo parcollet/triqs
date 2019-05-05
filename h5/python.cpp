@@ -114,7 +114,7 @@ namespace h5 {
     datatype dt     = npy_to_h5(elementsType);
     bool is_complex = (elementsType == NPY_CDOUBLE) or (elementsType == NPY_CLONGDOUBLE) or (elementsType == NPY_FLOAT);
 
-    h5_array_view res{rank, PyArray_DATA(arr_obj), is_complex};
+    h5_array_view res{dt, PyArray_DATA(arr_obj), rank};
 
     for (int i = 0; i < rank; ++i) {
 #ifdef PYTHON_NUMPY_VERSION_LT_17

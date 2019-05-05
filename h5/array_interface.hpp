@@ -12,7 +12,6 @@ namespace h5::details {
   struct h5_lengths_type {
     v_t lengths;
     datatype ty;
-    bool is_complex = false; //
 
     int rank() const { return lengths.size(); }
   };
@@ -25,9 +24,9 @@ namespace h5::details {
     v_t count;  // length in each dimension
     v_t block;  // block in each dimension
 
-    // Construct with proper size
+    // Constructor : unique to enforce the proper sizes of array
     hyperslab(int rank, bool is_complex)
-       : offset(rank + is_complex), stride(rank + is_complex), count(rank + is_complex), block() { // block is often unused
+       : offset(rank + is_complex, 0), stride(rank + is_complex, 1), count(rank + is_complex, 0), block() { // block is often unused
       if (is_complex) {
         stride[rank] = 1;
         count[rank]  = 2;
@@ -40,11 +39,10 @@ namespace h5::details {
   struct h5_array_view {
     datatype ty;             // HDF5 type
     void *start;             // start of data. It MUST be a pointer of T* with ty = hdf5_type<T>
-    bool is_complex = false; // If true, ty is a double, and the slab has an additional dimension of size 2.
-    hyperslab slab;          // 
+    hyperslab slab;          //
 
-    // Construct with proper size
-    h5_array_view(int rank, void *start, bool is_complex) : start(start), is_complex(is_complex), slab(rank, is_complex) {}
+    // Constructor : unique to enforce the proper sizes of array
+    h5_array_view(datatype ty, void *start, int rank) : ty(ty), start(start), slab(rank, is_complex(ty)) {}
 
     int rank() const { return slab.count.size(); }
   };

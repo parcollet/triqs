@@ -1,5 +1,6 @@
 #pragma once
 #include <complex>
+#include <sstream>
 
 namespace h5 {
 
@@ -7,12 +8,26 @@ namespace h5 {
   // in order to completely isolate our header from the hdf5 headers
   // Hence complex installation paths to hdf5 are only needed in the cpp file,
   // not by the users of the library.
-  using hid_t = int64_t;
+  using hid_t   = int64_t;
   using hsize_t = unsigned long long;
 
   // Correspondance T -> hdf5 type
-  template<typename T> hid_t hdf5_type;
+  template <typename T> hid_t hdf5_type;
 
+  //
+  bool is_complex(hid_t dt);
+
+  //
+  template <typename T> struct _is_complex : std::false_type {};
+  template <typename T> struct _is_complex<std::complex<T>> : std::true_type {};
+  template <typename T> constexpr bool is_complex_v = _is_complex<T>::value;
+
+  //
+  template <typename... T> std::runtime_error make_std_runtime_error(T const &... x) {
+    std::stringstream fs;
+    (fs << ... << x);
+    return std::runtime_error{fs.str()};
+  }
 
   //------------- general hdf5 object ------------------
   // HDF5 uses a reference counting system, similar to python.

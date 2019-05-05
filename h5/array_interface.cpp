@@ -27,36 +27,34 @@ namespace h5::details {
 
   //--------------------------------------------------------
 
-  void write(group g, std::string const &name, h5_array_view const &a) {
+  void write(group g, std::string const &name, h5_array_view const &v) {
 
     g.unlink_key_if_exists(name);
 
-    bool is_scalar    = (a.rank() == 0);
-    bool _is_complex  = a.is_complex;
-    dataspace d_space = (is_scalar ? dataspace(H5Screate(H5S_SCALAR)) : get_data_space(a));
+    bool is_scalar    = (v.rank() == 0);
+    dataspace d_space = (is_scalar ? dataspace(H5Screate(H5S_SCALAR)) : get_data_space(v));
 
     // FIXME : is it a good idea ??
     proplist cparms = H5P_DEFAULT;
     if (!is_scalar) { // if we wish to compress, yes by default ?
-      int n_dims = a.rank() + (_is_complex ? 1 : 0);
+      int n_dims = v.rank();
       hsize_t chunk_dims[n_dims];
-      for (int i = 0; i < a.rank(); ++i) chunk_dims[i] = std::max(a.slab.count[i], hsize_t{1});
-      if (_is_complex) chunk_dims[n_dims - 1] = 2;
+      for (int i = 0; i < v.rank(); ++i) chunk_dims[i] = std::max(v.slab.count[i], hsize_t{1});
       cparms = H5Pcreate(H5P_DATASET_CREATE);
       H5Pset_chunk(cparms, n_dims, chunk_dims);
       H5Pset_deflate(cparms, 8);
     }
 
-    datatype dt = a.ty;
+    datatype dt = v.ty;
     dataset ds  = g.create_dataset(name, dt, d_space, cparms);
 
     if (H5Sget_simple_extent_npoints(d_space) > 0) {
-      auto err = (is_scalar ? H5Dwrite(ds, dt, H5S_ALL, H5S_ALL, H5P_DEFAULT, a.start) : H5Dwrite(ds, dt, d_space, H5S_ALL, H5P_DEFAULT, a.start));
+      auto err = (is_scalar ? H5Dwrite(ds, dt, H5S_ALL, H5S_ALL, H5P_DEFAULT, v.start) : H5Dwrite(ds, dt, d_space, H5S_ALL, H5P_DEFAULT, v.start));
       if (err < 0) throw std::runtime_error("Error writing the scalar dataset " + name + " in the group" + g.name());
     }
 
     // if complex, to be python compatible, we add the __complex__ attribute
-    if (_is_complex) h5_write_attribute(ds, "__complex__", "1");
+    if (is_complex(v.ty)) h5_write_attribute(ds, "__complex__", "1");
   }
 
   //-------------------------------------------------------------
@@ -71,11 +69,10 @@ namespace h5::details {
     bool is_scalar    = (v.rank() == 0);
     dataspace d_space = (is_scalar ? dataspace{H5Screate(H5S_SCALAR)} : get_data_space(v));
 
-    auto dt        = v.ty;
-    attribute attr = H5Acreate2(id, name.c_str(), dt, d_space, H5P_DEFAULT, H5P_DEFAULT);
+    attribute attr = H5Acreate2(id, name.c_str(), v.ty, d_space, H5P_DEFAULT, H5P_DEFAULT);
     if (!attr.is_valid()) throw std::runtime_error("Cannot create the attribute " + name);
 
-    auto status = H5Awrite(attr, dt, v.start);
+    auto status = H5Awrite(attr, v.ty, v.start);
     if (status < 0) throw std::runtime_error("Cannot write the attribute " + name);
   }
 
@@ -85,20 +82,18 @@ namespace h5::details {
 
     dataset ds = g.open_dataset(name);
 
-    bool is_complex   = H5LTfind_attribute(ds, "__complex__"); // the array in file should be interpreted as a complex
+    bool has_complex_attribute = H5LTfind_attribute(ds, "__complex__"); // the array in file should be interpreted as a complex
     dataspace d_space = H5Dget_space(ds);
-    int rank_in_file  = H5Sget_simple_extent_ndims(d_space);
-    int rank          = rank_in_file - (is_complex ? 1 : 0);
+    int rank          = H5Sget_simple_extent_ndims(d_space);
 
     // need to use hsize_t here and the vector is truncated at rank
-    v_t res(rank);
-    hsize_t dims_out[rank_in_file];
-    H5Sget_simple_extent_dims(d_space, dims_out, NULL);
-    for (int u = 0; u < rank; ++u) res[u] = dims_out[u];
+    v_t dims_out(rank);
+    H5Sget_simple_extent_dims(d_space, dims_out.data(), NULL);
 
     //  get the type from the file
     datatype ty = H5Dget_type(ds);
-    return {std::move(res), ty, is_complex};
+    if (has_complex_attribute and (ty == hdf5_type<double>)) ty = hdf5_type<std::complex<double>>;
+    return {std::move(dims_out), ty};
   }
 
   //--------------------------------------------------------
