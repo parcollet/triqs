@@ -1,9 +1,9 @@
 #pragma once
 #include <vector>
 #include <complex>
-#include "./group.hpp"
+#include "../group.hpp"
 #include "./string.hpp"
-#include "./scalar.hpp"
+#include "../scalar.hpp"
 
 namespace h5 {
 
@@ -34,7 +34,7 @@ namespace h5 {
     auto g = f.open_group(name);
     if constexpr (std::is_arithmetic_v<T> or is_complex_v<T>) {
       auto lt = details::get_h5_lengths_type(g, name);
-      if (lt.rank() != 1) throw make_std_runtime_error("h5 : reading a vector and I got an array of rank", lt.rank());
+      if (lt.rank() != 1) throw make_runtime_error("h5 : reading a vector and I got an array of rank", lt.rank());
       v.resize(lt.lengths[0]);
       details::read(g, name, details::h5_array_view_from_vector(v), lt);
     } else { // generic type

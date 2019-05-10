@@ -25,6 +25,7 @@ namespace h5::details {
     v_t block;  // block in each dimension
 
     // Constructor : unique to enforce the proper sizes of array
+    // rank : the array will have rank + is_complex
     hyperslab(int rank, bool is_complex)
        : offset(rank + is_complex, 0), stride(rank + is_complex, 1), count(rank + is_complex, 0), block() { // block is often unused
       if (is_complex) {
@@ -32,26 +33,29 @@ namespace h5::details {
         count[rank]  = 2;
       }
     }
+
+    int rank() const { return count.size(); }
   };
 
   // Stores a view of an array.
   // scalar are array of rank 0, lengths, strides are empty, rank is 0, start is the scalar
   struct h5_array_view {
-    datatype ty;             // HDF5 type
-    void *start;             // start of data. It MUST be a pointer of T* with ty = hdf5_type<T>
-    hyperslab slab;          //
+    datatype ty;    // HDF5 type
+    void *start;    // start of data. It MUST be a pointer of T* with ty = hdf5_type<T>
+    hyperslab slab; //
 
     // Constructor : unique to enforce the proper sizes of array
+    // rank the rank a priori, it will +=1 if ty is complex
     h5_array_view(datatype ty, void *start, int rank) : ty(ty), start(start), slab(rank, is_complex(ty)) {}
 
-    int rank() const { return slab.count.size(); }
+    int rank() const { return slab.rank(); }
   };
 
   // Retrieve lengths and hdf5 type from a file
   h5_lengths_type get_h5_lengths_type(group g, std::string const &name);
 
   // Write the view of the array to the group
-  void write(group g, std::string const &name, h5_array_view const &a);
+  void write(group g, std::string const &name, h5_array_view const &a, bool compress);
 
   // INTERNAL [python interface only]
   // Same as before, but if lt = get_h5_lengths_type(g,name) has already been computed

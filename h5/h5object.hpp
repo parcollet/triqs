@@ -23,7 +23,7 @@ namespace h5 {
   template <typename T> constexpr bool is_complex_v = _is_complex<T>::value;
 
   //
-  template <typename... T> std::runtime_error make_std_runtime_error(T const &... x) {
+  template <typename... T> std::runtime_error make_runtime_error(T const &... x) {
     std::stringstream fs;
     (fs << ... << x);
     return std::runtime_error{fs.str()};

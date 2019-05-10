@@ -1,5 +1,5 @@
 #pragma once
-#include "./group.hpp"
+#include "../group.hpp"
 #include <string>
 
 namespace h5 {

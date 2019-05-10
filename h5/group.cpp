@@ -1,6 +1,6 @@
 #include <vector>
 #include "./group.hpp"
-#include "./string.hpp"
+#include "./stl/string.hpp"
 
 #include <hdf5.h>
 #include <hdf5_hl.h>

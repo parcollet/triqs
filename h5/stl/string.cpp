@@ -18,6 +18,7 @@ namespace h5 {
 
     datatype dt     = str_datatype(value.size() + 1);
     dataspace space = H5Screate(H5S_SCALAR);
+    // FIXME : remove create_dataset
     dataset ds      = g.create_dataset(name, dt, space);
 
     auto err = H5Dwrite(ds, dt, H5S_ALL, H5S_ALL, H5P_DEFAULT, (void *)(value.c_str()));
