@@ -400,7 +400,7 @@ namespace triqs {
   *  x_ >> expression  is the same as make_function(expression,x)
   * --------------------------------------------------------------------------------------------------- */
 
-    template <int N, typename Expr> make_fun_impl<Expr, N> operator>>(_ph<N> p, Expr &&ex) { return {ex}; }
+    template <int N, typename Expr> auto operator>>(_ph<N> p, Expr &&ex) { return make_function(ex, _ph<N>{}); }
 
     /* ---------------------------------------------------------------------------------------------------
   * Auto assign for ()
@@ -563,35 +563,6 @@ namespace triqs {
     }
 
     template <typename Obj, typename... Args> using make_expr_subscript_t = typename _result_of::make_expr_subscript<Obj, Args...>::type;
-
-    /* --------------------------------------------------------------------------------------------------
-  *  function class : stores any expression polymorphically
-  *  f(x_,y_ ) = an expression associates this expression dynamically to f, which
-  *  can then be used as a std::function of the same signature...
-  * --------------------------------------------------------------------------------------------------- */
-    template <typename F> class function;
-
-    template <typename ReturnType, typename... T> class function<ReturnType(T...)> : tags::function_class {
-      using std_function_type = std::function<ReturnType(T...)>;
-      mutable std::shared_ptr<void> _exp; // CLEAN THIS MUTABLE ?
-      mutable std::shared_ptr<std_function_type> _fnt_ptr;
-
-      public:
-      function() : _fnt_ptr{std::make_shared<std_function_type>()} {}
-
-      template <typename Expr, typename... X>
-      explicit function(Expr const &_e, X... x) : _exp(std::make_shared<Expr>(_e)), _fnt_ptr(new std_function_type(make_function(_e, x...))) {}
-
-      ReturnType operator()(T const &... t) const { return (*_fnt_ptr)(t...); }
-
-      template <typename... Args> auto operator()(Args &&... args) const DECL_AND_RETURN(make_expr_call(*this, std::forward<Args>(args)...));
-
-      template <typename RHS> friend FORCEINLINE void triqs_clef_auto_assign(function const &x, RHS rhs) {
-        *(x._fnt_ptr) = std_function_type(rhs);
-        x._exp        = std::make_shared<typename std::remove_cv<decltype(rhs.ex)>::type>(rhs.ex);
-      }
-    };
-    template <typename F> struct force_copy_in_expr<function<F>> : std::true_type {};
 
     /* --------------------------------------------------------------------------------------------------
   *  The macro to make any function lazy

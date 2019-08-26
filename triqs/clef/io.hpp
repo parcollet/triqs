@@ -94,7 +94,6 @@ namespace triqs {
       return sout << ") --> " << x.ex;
     }
 
-    template <typename F> std::ostream &operator<<(std::ostream &out, function<F> const &x) { return out << "function "; }
 
   } // namespace clef
 } // namespace triqs

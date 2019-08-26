@@ -44,6 +44,8 @@ using triqs::clef::placeholder;
 //return out;
 //}
 
+  using namespace std::literals;
+
 // Check that 'cout << Y' prints X
 #define EXPECT_PRINT(X, Y)                                                                                                                           \
   {                                                                                                                                                  \

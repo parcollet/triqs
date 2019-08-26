@@ -2,97 +2,103 @@
 
 double x = 1, y = 2;
 
-template <typename Expr> void test1(Expr expr) {
-  TEST(expr);
-  TEST(eval(expr, x_ = 5));
-  std::cout << "-------------" << std::endl;
-}
+#define _TEST_1(EXPR)                                                                                                                                \
+  EXPECT_EQ(eval(EXPR, x_ = 1, y_ = 2), [&](int x_, int y_) { return EXPR; }(1, 2));                                                                 \
+  EXPECT_EQ(eval(eval(EXPR, x_ = x_ + y_), x_ = 1, y_ = 2), [&](int x_, int y_) { return EXPR; }(3, 2));
 
-template <typename Expr> void test2(Expr const &expr) {
-  // std::cout << " type is " << triqs::utility::typeid_name(expr) << std::endl;
-  std::cout << " ------ start  test2  -----------------" << std::endl;
-  TEST(expr);
-  TEST(eval(expr, x_ = 1, y_ = 2));
-  TEST(eval(expr, x_ = 1));
-  TEST(eval(expr, x_ = x_ + y_));
-  TEST(eval(eval(expr, x_ = x_ + y_), x_ = 1, y_ = 2));
-}
-
-int main() {
-
+TEST(clef, eval) {
   F1 f(7);
 
-  test1(5 * x_);
-  test2(x_ + 2 * y_);
-  test2(x_ + 2 * y_ + x_);
-  test2(x_ / 2.0 + 2 * y_);
-  test2(f(x_));
-  test2(f(x_) + 2 * y_);
-  test2(1 / f(x_) + 2 * y_);
-
-#ifdef LONG
-  test2(1 / f(x_) + 2 * y_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_
-        + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_);
-#endif
-#ifdef LONG2
-  test2(2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_
-        + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + 1 / f(x_) + 2 * y_ + x_);
-#endif
-
-  {
-    auto expr1 = x_ * 2;
-    auto myf1  = make_function(expr1, x_);
-    std::cout << myf1(2) << " = " << 4 << std::endl;
-
-    auto expr  = x_ + 2 * y_;
-    auto myf   = make_function(expr, x_, y_);
-    auto myf_r = make_function(expr, y_, x_);
-
-    std::cout << myf(2, 5) << " = " << 12 << std::endl;
-    std::cout << myf(5, 2) << " = " << 9 << std::endl;
-    std::cout << myf_r(2, 5) << " = " << 9 << std::endl;
-    std::cout << myf_r(5, 2) << " = " << 12 << std::endl;
-    std::cout << "-------------" << std::endl;
-  }
-
-  {
-    // testing the LHS wrting on an object caught by ref
-    F1 f(7);
-    std::cerr << " operator(double) still ok " << f(2) << std::endl;
-    std::cout << " f.v before assign " << f.v << " " << std::endl;
-    f(x_) << 8 * x_;
-    //f(x_ + y_) << 8*x_ ;// leads to a compile error as expected
-    // test.cpp:129:14: error: no viable overloaded '='
-    // f(x_ + y_) << 8*x_ ;
-    // ~~~~~~~~~~ ^ ~~~~
-    std::cout << " f.v after assign " << f.v << " " << std::endl;
-    std::cout << "-------------" << std::endl;
-    std::cerr << F1{9}(2, x_, F1{2}) << std::endl;
-    auto expr = F1{9}(x_);
-    expr << 7 * x_;
-    std::cerr << expr << std::endl;
-    F1{9}(x_) << 8 * x_;
-    std::cerr << "-------------" << std::endl;
-  }
-
-  {
-    // testing fnt of 2 variables
-    F2 ff;
-    std::cout << "expr = " << (ff(x_, y_) + 2 * y_) << std::endl;
-    std::cout << "eval(expr,x_ =1, y_ =2) =  " << eval(ff(x_, y_) + 2 * y_, x_ = x, y_ = y) << " and it should be " << ff(x, y) + 2 * y << std::endl;
-    auto tmp = ff(2.0, y_);
-
-    std::cout << " tmp =" << tmp << std::endl;
-    std::cout << "another  =  " << eval(tmp, x_ = x) << std::endl;
-    std::cout << "another  =  " << eval(ff(x_, 2), x_ = x) << std::endl;
-    std::cout << "-------------" << std::endl;
-  }
-
-  {
-    // testing expression if
-    TEST(eval(if_else(true, 2 * x_, y_), x_ = 1, y_ = 3));
-    TEST(eval(if_else(false, 2 * x_, y_), x_ = 1, y_ = 3));
-    TEST(eval(if_else(x_ > y_, 2 * x_, y_), x_ = 1, y_ = 3));
-  }
-  std::cout << (x_ < y_) << std::endl;
+  _TEST_1(5 * x_);
+  _TEST_1(x_ + 2 * y_);
+  _TEST_1(x_ + 2 * y_ + x_);
+  _TEST_1(x_ / 2.0 + 2 * y_);
+  _TEST_1(f(x_));
+  _TEST_1(f(x_) + 2 * y_);
+  _TEST_1(1 / f(x_) + 2 * y_);
 }
+
+// -----------------------
+
+TEST(clef, makefunction) {
+
+  auto expr  = x_ + 2 * y_;
+  auto myf   = make_function(expr, x_, y_);
+  auto myf_r = make_function(expr, y_, x_);
+
+  EXPECT_EQ(myf(2, 5), 12);
+  EXPECT_EQ(myf(5, 2), 9);
+  EXPECT_EQ(myf_r(2, 5), 9);
+  EXPECT_EQ(myf_r(5, 2), 12);
+}
+
+// -----------------------
+
+TEST(clef, makefunctionparametric) {
+  auto expr = 2 * x_ + 1;
+  auto r    = make_function(expr, x_);
+  auto r2   = x_ >> expr;
+  EXPECT_EQ(r(3), 7);
+  EXPECT_EQ(r2(3), 7);
+
+  EXPECT_EQ((eval(make_function(x_ + 2 * y_, x_), y_ = 2)(3)), 7);
+  EXPECT_EQ((make_function(x_ + 2, x_)(3)), 5);
+}
+
+// -----------------------
+
+TEST(clef, autoassign) {
+  F1 f(7);
+  EXPECT_EQ(f(2), 20);
+  EXPECT_EQ(f.v, 7);
+
+  f(x_) << 8 * x_;
+  EXPECT_EQ(f.v, 8 * 7);
+
+  // f(x_ + y_) << 8*x_ ; // SHOULD NOT COMPILE
+}
+
+// -----------------------
+
+TEST(clef, F2) {
+  F2 ff;
+  EXPECT_EQ(eval(ff(x_, y_) + 2 * y_, x_ = x, y_ = y), ff(x, y) + 2 * y);
+  EXPECT_EQ(eval(ff(x_, 2), x_ = x), 12);
+}
+
+// -----------------------
+
+TEST(clef, elseif) {
+  EXPECT_EQ(eval(if_else(true, 2 * x_, y_), x_ = 1, y_ = 3), 2);
+  EXPECT_EQ(eval(if_else(false, 2 * x_, y_), x_ = 1, y_ = 3), 3);
+  EXPECT_EQ(eval(if_else(x_ > y_, 2 * x_, y_), x_ = 1, y_ = 3), 3);
+  EXPECT_PRINT("(_1 < _2)"s, (x_ < y_));
+}
+
+
+struct Obj {
+  double v;                  // put something in it
+  Obj(double v_) : v(v_) {}  // constructor
+  Obj(Obj const &) = delete; // a non copyable object, to illustrate that we do NOT copy...
+
+  // a method
+  double my_method(double x) const { return 2 * x; }
+
+  // CLEF overload
+  TRIQS_CLEF_IMPLEMENT_LAZY_METHOD(Obj, my_method);
+
+  // Just to print itself nicely in the expressions
+  friend std::ostream &operator<<(std::ostream &out, Obj const &x) { return out << "Obj"; }
+};
+
+// -----------------------
+TEST(clef, lazymethod) {
+  Obj f(7);
+  EXPECT_EQ(eval(f.my_method(x_) + 2 * x_, x_ = 1), 4);
+  EXPECT_EQ(eval(f.my_method(y_) + 2 * x_, x_ = 3, y_ = 1), 8);
+  std::cerr << "Clef expression     : " << f.my_method(y_) + 2 * x_ << std::endl;
+  std::cerr << "Partial evaluation  : " << eval(f.my_method(y_) + 2 * x_, y_ = 1) << std::endl;
+}
+
+
+MAKE_MAIN;

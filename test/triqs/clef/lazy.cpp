@@ -6,28 +6,28 @@ using namespace triqs::clef;
 triqs::clef::placeholder<10> i_;
 triqs::clef::placeholder<11> j_;
 
-int main() {
+TEST(Clef, Lazy) {
+  std::vector<int> V{14,2,3}, W(3,0);
 
-  std::vector<int> V(3), W(3);
-  V[0] = 14;
-  V[1] = 2;
-  V[2] = 3;
-  std::cout << "V = " << V[0] << " " << V[1] << " " << V[2] << std::endl;
-
-  TEST(tql::eval(make_expr(V)[i_], i_ = 0));
+  EXPECT_EQ(eval(make_expr(V)[i_], i_ = 0), 14);
 
   make_expr(V)[i_] << i_ + 2;
-
-  std::cout << "V = " << V[0] << " " << V[1] << " " << V[2] << std::endl;
+  EXPECT_EQ(V[0], 2);
+  EXPECT_EQ(V[1], 3);
+  EXPECT_EQ(V[2], 4);
 
   make_expr(W)[i_] << i_ + make_expr(V)[i_];
 
-  std::cout << "W = " << W[0] << " " << W[1] << " " << W[2] << std::endl;
+  EXPECT_EQ(W[0], 2);
+  EXPECT_EQ(W[1], 4);
+  EXPECT_EQ(W[2], 6);
 
   std::vector<std::vector<int>> v2(3, std::vector<int>(2));
 
   make_expr(v2)[i_][j_] << (i_ + j_ + 1);
 
   for (size_t u = 0; u < v2.size(); ++u)
-    for (size_t up = 0; up < v2[0].size(); ++up) std::cout << v2[u][up] << u + up + 1 << std::endl;
+    for (size_t up = 0; up < v2[0].size(); ++up) EXPECT_EQ(v2[u][up], u + up + 1);
 }
+
+MAKE_MAIN;
