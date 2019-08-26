@@ -6,8 +6,7 @@ using namespace triqs::clef;
 triqs::clef::placeholder<10> i_;
 triqs::clef::placeholder<11> j_;
 
-int main() {
-
+TEST(Clef, Lazy) {
   std::vector<int> V(3), W(3);
   V[0] = 14;
   V[1] = 2;
@@ -31,3 +30,6 @@ int main() {
   for (size_t u = 0; u < v2.size(); ++u)
     for (size_t up = 0; up < v2[0].size(); ++up) std::cout << v2[u][up] << u + up + 1 << std::endl;
 }
+
+MAKE_MAIN;
+

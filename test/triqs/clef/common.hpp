@@ -1,6 +1,13 @@
 #include <triqs/clef/clef.hpp>
 #include <triqs/clef/io.hpp>
-#define TEST(X) std::cout << BOOST_PP_STRINGIZE((X)) << " ---> " << (X) << std::endl;
+#include <sstream>
+#include <triqs/test_tools/arrays.hpp>
+
+template <typename T> std::string to_string(T const &x) {
+  std::stringstream fs;
+  fs << x;
+  return fs.str();
+}
 
 struct F1 {
   double v;

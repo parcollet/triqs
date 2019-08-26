@@ -30,15 +30,6 @@ int main() {
   test2(f(x_) + 2 * y_);
   test2(1 / f(x_) + 2 * y_);
 
-#ifdef LONG
-  test2(1 / f(x_) + 2 * y_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_
-        + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_);
-#endif
-#ifdef LONG2
-  test2(2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_
-        + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + x_ + 2 * x_ + 1 / f(x_) + 2 * y_ + x_);
-#endif
-
   {
     auto expr1 = x_ * 2;
     auto myf1  = make_function(expr1, x_);

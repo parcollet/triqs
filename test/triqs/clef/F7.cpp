@@ -23,10 +23,13 @@ triqs::clef::placeholder<6> x6_;
 triqs::clef::placeholder<7> x7_;
 triqs::clef::placeholder<8> x8_;
 
-int main() {
+TEST(Clef, F7) {
 
   F7 f(7), g(8), h(7);
-  TEST(tql::eval(f(x1_, x2_, x3_, x4_, x5_, x6_, x7_), x_ = 1, y_ = 2));
+  
+  auto str = to_string(tql::eval(f(x1_, x2_, x3_, x4_, x5_, x6_, x7_), x_ = 1, y_ = 2));
+  EXPECT_EQ(str, "F7(1, 2, _3, _4, _5, _6, _7)");
+
 
   f(x1_, x2_, x3_, x4_, x5_, x6_, x7_) << x1_ + x2_ + x3_ + x4_ + x5_ + x6_ + x7_;
   f(x1_, x2_, x3_, x4_, x5_, x6_, x7_) << x1_ + 2 * x2_ + x3_ + x4_ + x5_ + x6_ + x7_;
@@ -49,3 +52,6 @@ int main() {
   f(x1_, x2_, x3_, x4_, x5_, x6_, x7_) << g(x1_, x2_, x3_, x4_, x5_, x6_, x7_) / h(x1_, x2_, x3_, x4_, x5_, x6_, x7_)
         - g(x1_, x2_, x3_, x4_, x5_, x6_, x7_) * h(x1_, x2_, x3_, x4_, x5_, x6_, x7_);
 }
+
+MAKE_MAIN;
+
