@@ -71,6 +71,9 @@ target_link_libraries(triqs PUBLIC h5::h5_c)
 # HDF5 (still used explicitly in many_body_operator)
 target_link_libraries(triqs PRIVATE h5::hdf5)
 
+# NDA
+target_link_libraries(triqs PUBLIC nda_c)
+
 ## NDA
 #target_link_libraries(triqs PUBLIC nda::nda_c)
 
