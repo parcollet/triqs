@@ -25,8 +25,24 @@
 
 #include <h5/h5.hpp>
 #include <nda/nda.hpp>
+#include <nda/h5.hpp>
+#include <nda/mpi.hpp>
+//#include <nda/blas.hpp>
+#include <nda/lapack.hpp>
 
 namespace triqs::arrays { 
 
   using namespace nda;
+
+
+ template<typename T> 
+   using vector = nda::array<T, 1>;
+
+ template<typename T> 
+   using vector_view = nda::array_view<T, 1>;
+
+
+
+
+
 }

@@ -26,25 +26,6 @@
 #include <type_traits>
 #include <iostream>
 
-#define AS_STRING(...) AS_STRING2(__VA_ARGS__)
-#define AS_STRING2(...) #__VA_ARGS__
-
-#define TYPE_ENABLE_IF(Type, ...) typename boost::enable_if<__VA_ARGS__, Type>::type
-#define TYPE_ENABLE_IFC(Type, ...) typename boost::enable_if_c<__VA_ARGS__, Type>::type
-#define TYPE_DISABLE_IF(Type, ...) typename boost::disable_if<__VA_ARGS__, Type>::type
-#define TYPE_DISABLE_IFC(Type, ...) typename boost::disable_if_c<__VA_ARGS__, Type>::type
-
-#ifdef __clang__
-#define REQUIRES(...) __attribute__((enable_if(__VA_ARGS__, AS_STRING(__VA_ARGS__))))
-#elif __GNUC__
-#define REQUIRES(...) requires(__VA_ARGS__)
-#endif
-
-#define ENABLE_IF(...) typename boost::enable_if<__VA_ARGS__, void>::type
-#define ENABLE_IFC(...) typename boost::enable_if_c<__VA_ARGS__, void>::type
-#define DISABLE_IF(...) typename boost::disable_if<__VA_ARGS__, void>::type
-#define DISABLE_IFC(...) typename boost::disable_if_c<__VA_ARGS__, void>::type
-
 #define DECL_AND_RETURN(...)                                                                                                                         \
   ->decltype(__VA_ARGS__) { return __VA_ARGS__; }
 
@@ -63,6 +44,11 @@ namespace triqs {
     return 1;                                                                                                                                        \
   }
 
+#define TYPE_ENABLE_IF(Type, ...) typename boost::enable_if<__VA_ARGS__, Type>::type
+#define TYPE_ENABLE_IFC(Type, ...) typename boost::enable_if_c<__VA_ARGS__, Type>::type
+#define TYPE_DISABLE_IF(Type, ...) typename boost::disable_if<__VA_ARGS__, Type>::type
+#define TYPE_DISABLE_IFC(Type, ...) typename boost::disable_if_c<__VA_ARGS__, Type>::type
+
 #define TRIQS_DEPRECATED(Message) __attribute__((deprecated(AS_STRING(Message))))
 #define TRIQS_PRINT(X) std::cerr << AS_STRING(X) << " = " << X << "      at " << __FILE__ << ":" << __LINE__ << '\n'
 
@@ -74,25 +60,3 @@ namespace triqs {
   std::terminate();                                                                                                                                  \
   }
 
-// Macros mimicing the c++20 contracts behavior
-#ifdef TRIQS_DEBUG
-#define EXPECTS(X)                                                                                                                                   \
-  if (!(X)) {                                                                                                                                        \
-    std::cerr << "Precondition " << AS_STRING(X) << " violated at " << __FILE__ << ":" << __LINE__ << "\n" << triqs::utility::stack_trace();         \
-    std::terminate();                                                                                                                                \
-  }
-#define ASSERT(X)                                                                                                                                    \
-  if (!(X)) {                                                                                                                                        \
-    std::cerr << "Assertion " << AS_STRING(X) << " violated at " << __FILE__ << ":" << __LINE__ << "\n" << triqs::utility::stack_trace();            \
-    std::terminate();                                                                                                                                \
-  }
-#define ENSURES(X)                                                                                                                                   \
-  if (!(X)) {                                                                                                                                        \
-    std::cerr << "Postcondition " << AS_STRING(X) << " violated at " << __FILE__ << ":" << __LINE__ << "\n" << triqs::utility::stack_trace();        \
-    std::terminate();                                                                                                                                \
-  }
-#else
-#define EXPECTS(X)
-#define ASSERT(X)
-#define ENSURES(X)
-#endif
