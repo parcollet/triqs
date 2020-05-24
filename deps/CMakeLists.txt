@@ -65,23 +65,23 @@ external_dependency(GTest
 # -- itertools --
 external_dependency(itertools
   GIT_REPO https://github.com/TRIQS/itertools
-  GIT_TAG unstable
+  GIT_TAG cpp20
 )
 
 # -- mpi --
 external_dependency(mpi
   GIT_REPO https://github.com/TRIQS/mpi
-  GIT_TAG unstable
+  GIT_TAG cpp20
 )
 
 # -- h5 --
 external_dependency(h5
   GIT_REPO https://github.com/TRIQS/h5
-  GIT_TAG unstable
+  GIT_TAG cpp20
 )
 
 # -- nda --
 external_dependency(nda
   GIT_REPO https://github.com/TRIQS/nda
-  GIT_TAG unstable
+  GIT_TAG cpp20
 )
