@@ -19,7 +19,7 @@
  *
  ******************************************************************************/
 #pragma once
-#include <triqs/clef.hpp>
+#include <clef/clef.hpp>
 
 inline bool kronecker(int i, int j) { return i == j; }
 
