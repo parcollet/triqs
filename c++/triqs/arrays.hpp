@@ -23,6 +23,8 @@
 // for python code generator, we need to know what to include...
 #define TRIQS_INCLUDED_ARRAYS
 
+#include <assert.h>
+
 #include<complex>
 #include <h5/h5.hpp>
 #include <nda/nda.hpp>
@@ -30,6 +32,7 @@
 #include <nda/mpi.hpp>
 //#include <nda/blas.hpp>
 #include <nda/lapack.hpp>
+#include <nda/linalg/det_and_inverse.hpp>
 
 #include "utility/concept_tools.hpp"
 
