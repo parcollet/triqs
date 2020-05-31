@@ -23,12 +23,15 @@
 // for python code generator, we need to know what to include...
 #define TRIQS_INCLUDED_ARRAYS
 
+#include<complex>
 #include <h5/h5.hpp>
 #include <nda/nda.hpp>
 #include <nda/h5.hpp>
 #include <nda/mpi.hpp>
 //#include <nda/blas.hpp>
 #include <nda/lapack.hpp>
+
+#include "utility/concept_tools.hpp"
 
 #define TRIQS_CLEF_MAKE_FNT_LAZY CLEF_MAKE_FNT_LAZY
 #define TRIQS_CLEF_IMPLEMENT_LAZY_CALL CLEF_IMPLEMENT_LAZY_CALL
@@ -37,6 +40,15 @@
 #ifndef TRIQS_RUNTIME_ERROR
 #define TRIQS_RUNTIME_ERROR NDA_RUNTIME_ERROR
 #endif
+
+
+namespace triqs { 
+
+  namespace clef = ::clef;
+  using dcomplex = std::complex<double>;
+  using nda::range;
+
+}
 
 namespace triqs::utility {
 

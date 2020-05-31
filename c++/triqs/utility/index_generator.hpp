@@ -19,7 +19,6 @@
  *
  ******************************************************************************/
 #pragma once
-#include "./mini_vector.hpp"
 
 namespace triqs {
   namespace utility {

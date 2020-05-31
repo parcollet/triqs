@@ -35,10 +35,8 @@ namespace triqs::gfs {
   using arrays::matrix_const_view;
   using arrays::matrix_view;
   using arrays::memory_layout_t;
-  using arrays::mini_vector;
 
   using itertools::range;
-  using triqs::make_clone;
   using utility::factory;
 
   // Using from mesh namespace
