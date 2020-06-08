@@ -23,7 +23,6 @@
 #include <triqs/arrays.hpp>
 #include <triqs/utility/arithmetic_ops_by_cast.hpp>
 #include <triqs/utility/tuple_tools.hpp>
-#include <triqs/utility/mini_vector.hpp>
 
 namespace triqs::mesh {
 
@@ -40,7 +39,6 @@ namespace triqs::mesh {
   using arrays::mini_vector;
 
   using itertools::range;
-  using triqs::make_clone;
 
   //-----------------------------------------------------------------------------------------------------------------------------
 
