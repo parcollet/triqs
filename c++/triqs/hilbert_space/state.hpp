@@ -25,7 +25,6 @@
 #include <boost/operators.hpp>
 #include <triqs/utility/numeric_ops.hpp>
 #include <triqs/arrays.hpp>
-#include <triqs/arrays/blas_lapack/dot.hpp>
 #include "hilbert_space.hpp"
 
 namespace triqs {
@@ -241,7 +240,7 @@ namespace triqs {
       /**
    @param hs Hilbert space the new state belongs to
   */
-      state(HilbertSpace const &hs) : hs_p(&hs), ampli(hs.size(), 0.0) {}
+      state(HilbertSpace const &hs) : hs_p(&hs), ampli(nda::zeros<ScalarType>(hs.size())) {}
 
       /// Return the dimension of the associated Hilbert space
       /**

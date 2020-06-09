@@ -21,7 +21,6 @@
 #pragma once
 #include "./defs.hpp"
 #include "./gf_indices.hpp"
-#include "./data_proxy.hpp"
 #include "./comma.hpp"
 
 namespace triqs::gfs {
@@ -35,10 +34,11 @@ namespace triqs::gfs {
   /*------------------------------------------------------------------------
    *   Forward Declaration of the main types : gf, gf_view, gf_const_view
    *-----------------------------------------------------------------------*/
+  using nda::C_layout;
 
-  template <typename Mesh, typename Target = matrix_valued> class gf;
-  template <typename Mesh, typename Target = matrix_valued> class gf_view;
-  template <typename Mesh, typename Target = matrix_valued> class gf_const_view;
+  template <typename Mesh, typename Target = matrix_valued, typename Layout = C_layout, typename EvalPolicy = default_evaluator> class gf;
+  template <typename Mesh, typename Target = matrix_valued, typename Layout = C_layout, typename EvalPolicy = default_evaluator> class gf_view;
+  template <typename Mesh, typename Target = matrix_valued, typename Layout = C_layout, typename EvalPolicy = default_evaluator> class gf_const_view;
 
   /*----------------------------------------------------------
    *   Traits
@@ -56,10 +56,9 @@ namespace triqs::gfs {
 
   // is_gf<G> Check if G fullfills the Green function concecpt
   template <typename G, typename M = void> inline constexpr bool is_gf_v = false;
-  template <typename G> inline constexpr bool is_gf_v<G, void> =
-    is_instantiation_of_v<gf, G> or
-    is_instantiation_of_v<gf_view, G> or
-    is_instantiation_of_v<gf_const_view, G>;
+  template <typename G>
+  inline constexpr bool is_gf_v<G, void> =
+     is_instantiation_of_v<gf, G> or is_instantiation_of_v<gf_view, G> or is_instantiation_of_v<gf_const_view, G>;
   template <typename G> inline constexpr bool is_gf_v<G, typename std::decay_t<G>::mesh_t> = is_gf_v<G, void>;
 
   /// ---------------------------  tags for some implementation details  ---------------------------------
@@ -76,30 +75,30 @@ namespace triqs::gfs {
    *
    * @include triqs/gfs.hpp
    */
-  template <typename Mesh, typename Target> class gf : TRIQS_CONCEPT_TAG_NAME(GreenFunction) {
+  template <typename Mesh, typename Target, typename Layout, typename EvalPolicy> class gf : TRIQS_CONCEPT_TAG_NAME(GreenFunction) {
 
     static_assert(not std::is_same_v<Mesh, triqs::lattice::brillouin_zone>,
                   "Since TRIQS 2.3, brillouin_zone is replaced by mesh::b_zone as a mesh name. Cf Doc, changelog");
 
-    using this_t = gf<Mesh, Target>; // used in common code
+    using this_t = gf<Mesh, Target, Layout, EvalPolicy>; // used in common code
 
     public:
     static constexpr bool is_view  = false;
     static constexpr bool is_const = false;
 
-    using mutable_view_type = gf_view<Mesh, Target>;
+    using mutable_view_type = gf_view<Mesh, Target, Layout, EvalPolicy>;
 
     /// Associated const view type
-    using const_view_type = gf_const_view<Mesh, Target>;
+    using const_view_type = gf_const_view<Mesh, Target, Layout, EvalPolicy>;
 
     /// Associated (non const) view type
-    using view_type = gf_view<Mesh, Target>;
+    using view_type = gf_view<Mesh, Target, Layout, EvalPolicy>;
 
     /// Associated regular type (gf<....>)
-    using regular_type = gf<Mesh, Target>;
+    using regular_type = gf<Mesh, Target, Layout, EvalPolicy>;
 
     /// The associated real type
-    using real_t = gf<Mesh, typename Target::real_t>;
+    using real_t = gf<Mesh, typename Target::real_t, Layout, EvalPolicy>;
 
     /// Template type
     using target_t = Target;
@@ -118,7 +117,7 @@ namespace triqs::gfs {
     using linear_mesh_index_t = typename mesh_t::linear_index_t;
 
     using indices_t   = gf_indices;
-    using evaluator_t = gf_evaluator<Mesh, Target>;
+    using evaluator_t = typename EvalPolicy::template evaluator_t<Mesh, Target>;
 
     /// Real or Complex
     using scalar_t = typename Target::scalar_t;
@@ -131,9 +130,6 @@ namespace triqs::gfs {
 
     /// Type of the data array
     using data_t = arrays::array<scalar_t, data_rank>;
-
-    /// Type of the memory layout
-    using data_memory_layout_t = memory_layout_t<data_rank>;
 
     // FIXME : std::array with NDA
     using target_shape_t = arrays::mini_vector<int, Target::rank>;
@@ -200,13 +196,6 @@ namespace triqs::gfs {
      */
     auto target_indices() const { return itertools::product_range(target().shape()); }
 
-    /** 
-     * Memorylayout of the data
-     *
-     * @category Accessors
-     */
-    memory_layout_t<data_rank> const &memory_layout() const { return _data.indexmap().memory_layout(); }
-
     /// Indices of the Green function (for Python only)
     indices_t const &indices() const { return _indices; }
 
@@ -214,8 +203,6 @@ namespace triqs::gfs {
     mesh_t _mesh;
     data_t _data;
     indices_t _indices;
-
-    using dproxy_t = details::_data_proxy<Target>;
 
     // -------------------------------- impl. details common to all classes -----------------------------------------------
 
@@ -255,18 +242,6 @@ namespace triqs::gfs {
     }
 
     public:
-    /**
-       *
-       *  @param m Mesh
-       *  @param shape Target shape
-       *  @param ml Memory layout for the *whole* data array
-       *  @param ind Indices
-       * 
-       */
-    gf(mesh_t m, target_shape_t shape, arrays::memory_layout_t<arity + Target::rank> const &ml, indices_t const &ind = indices_t{})
-       : gf(impl_tag{}, std::move(m), data_t(make_data_shape(Target{}, m, shape), ml), ind) {
-      if (this->_indices.empty()) this->_indices = indices_t(shape);
-    }
 
     /**
      *  @param m Mesh
@@ -288,17 +263,6 @@ namespace triqs::gfs {
        : gf(impl_tag{}, std::move(m), data_t(make_data_shape(Target{}, m, shape)), ind) {
       if (this->_indices.empty()) this->_indices = indices_t(shape);
     }
-
-    /**
-     *  @param m Mesh
-     *  @param dat data arrray
-     *  @param ml Memory layout for the *whole* data array
-     *  @param ind Indices
-     *
-     *  @note  Using the "pass by value" and move
-     */
-    gf(mesh_t m, data_t dat, arrays::memory_layout_t<arity + Target::rank> const &ml, indices_t ind)
-       : gf(impl_tag{}, std::move(m), data_t(dat, ml), std::move(ind)) {}
 
     /**
      *  Makes a deep copy of the data
@@ -404,8 +368,8 @@ namespace triqs::gfs {
      * @param l The lazy object returned by mpi::reduce
      */
     void operator=(mpi_lazy<mpi::tag::reduce, gf_const_view<Mesh, Target>> l) {
-      _mesh = l.rhs.mesh();
-      _data = mpi::reduce(l.rhs.data(), l.c, l.root, l.all, l.op); // arrays:: necessary on gcc 5. why ??
+      _mesh    = l.rhs.mesh();
+      _data    = mpi::reduce(l.rhs.data(), l.c, l.root, l.all, l.op); // arrays:: necessary on gcc 5. why ??
       _indices = l.rhs.indices();
     }
 
@@ -414,8 +378,8 @@ namespace triqs::gfs {
      * @param l The lazy object returned by mpi::scatter
      */
     void operator=(mpi_lazy<mpi::tag::scatter, gf_const_view<Mesh, Target>> l) {
-      _mesh = mpi::scatter(l.rhs.mesh(), l.c, l.root);
-      _data = mpi::scatter(l.rhs.data(), l.c, l.root, true);
+      _mesh    = mpi::scatter(l.rhs.mesh(), l.c, l.root);
+      _data    = mpi::scatter(l.rhs.data(), l.c, l.root, true);
       _indices = mpi::scatter(l.rhs.indices(), l.c, l.root);
     }
 
@@ -424,8 +388,8 @@ namespace triqs::gfs {
      * @param l The lazy object returned by mpi::gather
      */
     void operator=(mpi_lazy<mpi::tag::gather, gf_const_view<Mesh, Target>> l) {
-      _mesh = mpi::gather(l.rhs.mesh(), l.c, l.root);
-      _data = mpi::gather(l.rhs.data(), l.c, l.root, l.all);
+      _mesh    = mpi::gather(l.rhs.mesh(), l.c, l.root);
+      _data    = mpi::gather(l.rhs.data(), l.c, l.root, l.all);
       _indices = mpi::gather(l.rhs.indices(), l.c, l.root);
     }
 
@@ -447,4 +411,3 @@ namespace triqs::gfs {
   gf(gf_expr<Tag, L, R> const &) -> gf<typename gf_expr<Tag, L, R>::variable_t, typename gf_expr<Tag, L, R>::target_t>;
 
 } // namespace triqs::gfs
-

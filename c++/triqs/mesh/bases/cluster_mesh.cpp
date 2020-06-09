@@ -1,7 +1,7 @@
 #include "./cluster_mesh.hpp"
 
 namespace triqs::mesh {
-  utility::mini_vector<int, 3> find_cell_dims(arrays::matrix<double> const &inv_n) {
+  std::array<long, 3> find_cell_dims(arrays::matrix<double> const &inv_n) {
 
     arrays::matrix<double> n_mat = inverse(inv_n);
     double Ld                    = arrays::determinant(n_mat);
@@ -12,7 +12,7 @@ namespace triqs::mesh {
     clef::placeholder<0> i_;
     std::vector<arrays::vector<int>> units{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
     std::vector<arrays::vector<int>> C{{0, 0, 0}};
-    std::vector<int> k_res(3);
+    std::array<long, 3> k_res(3);
     for (int d = 0; d < 3; d++) {
       k_res[d] = L + 1;
       for (auto const &x : C) {

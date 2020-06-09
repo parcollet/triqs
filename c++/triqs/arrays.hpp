@@ -35,19 +35,20 @@
 #include <nda/linalg/det_and_inverse.hpp>
 
 #include "utility/concept_tools.hpp"
+#include "utility/exceptions.hpp"
 
 #define TRIQS_CLEF_MAKE_FNT_LAZY CLEF_MAKE_FNT_LAZY
 #define TRIQS_CLEF_IMPLEMENT_LAZY_CALL CLEF_IMPLEMENT_LAZY_CALL
 
 // FIXME
-#ifndef TRIQS_RUNTIME_ERROR
-#define TRIQS_RUNTIME_ERROR NDA_RUNTIME_ERROR
-#endif
+//#ifndef TRIQS_RUNTIME_ERROR
+//#define TRIQS_RUNTIME_ERROR NDA_RUNTIME_ERROR
+//#endif
 
 
 namespace triqs { 
 
-  namespace clef = ::clef;
+  namespace clef = nda::clef;
   using dcomplex = std::complex<double>;
   using nda::range;
 

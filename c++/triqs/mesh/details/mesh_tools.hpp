@@ -36,9 +36,8 @@ namespace triqs::mesh {
   using arrays::matrix;
   using arrays::matrix_const_view;
   using arrays::matrix_view;
-  using arrays::mini_vector;
 
-  using itertools::range;
+  using nda::range;
 
   //-----------------------------------------------------------------------------------------------------------------------------
 

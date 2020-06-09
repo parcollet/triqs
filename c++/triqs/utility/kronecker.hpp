@@ -19,10 +19,9 @@
  *
  ******************************************************************************/
 #pragma once
-#include <clef/clef.hpp>
 
 inline bool kronecker(int i, int j) { return i == j; }
 
-namespace clef {
-  TRIQS_CLEF_MAKE_FNT_LAZY(kronecker);
+namespace nda::clef {
+ CLEF_MAKE_FNT_LAZY(kronecker);
 }

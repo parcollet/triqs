@@ -32,27 +32,27 @@ namespace triqs::gfs {
    *
    * @include triqs/gfs.hpp
    */
-  template <typename Mesh, typename Target> class gf_view : is_view_tag, TRIQS_CONCEPT_TAG_NAME(GreenFunction) {
+  template <typename Mesh, typename Target, typename Layout, typename EvalPolicy> class gf_view : is_view_tag, TRIQS_CONCEPT_TAG_NAME(GreenFunction) {
 
-    using this_t = gf_view<Mesh, Target>; // used in common code
+    using this_t = gf_view<Mesh, Target, Layout, EvalPolicy>; // used in common code
 
     public:
     static constexpr bool is_view  = true;
     static constexpr bool is_const = false;
 
-    using mutable_view_type = gf_view<Mesh, Target>;
+    using mutable_view_type = gf_view<Mesh, Target, Layout, EvalPolicy>;
 
     /// Associated const view type
-    using const_view_type = gf_const_view<Mesh, Target>;
+    using const_view_type = gf_const_view<Mesh, Target, Layout, EvalPolicy>;
 
     /// Associated (non const) view type
-    using view_type = gf_view<Mesh, Target>;
+    using view_type = gf_view<Mesh, Target, Layout, EvalPolicy>;
 
     /// Associated regular type (gf<....>)
-    using regular_type = gf<Mesh, Target>;
+    using regular_type = gf<Mesh, Target, Layout, EvalPolicy>;
 
     /// The associated real type
-    using real_t = gf_view<Mesh, typename Target::real_t>;
+    using real_t = gf_view<Mesh, typename Target::real_t, Layout, EvalPolicy>;
 
     /// Template type
     using target_t = Target;
@@ -71,7 +71,7 @@ namespace triqs::gfs {
     using linear_mesh_index_t = typename mesh_t::linear_index_t;
 
     using indices_t   = gf_indices;
-    using evaluator_t = gf_evaluator<Mesh, Target>;
+    using evaluator_t = typename EvalPolicy::template evaluator_t<Mesh, Target>;
 
     /// Real or Complex
     using scalar_t = typename Target::scalar_t;
@@ -88,9 +88,6 @@ namespace triqs::gfs {
 
     /// Type of the data array
     using data_t = data_view_t;
-
-    /// Type of the memory layout
-    using data_memory_layout_t = memory_layout_t<data_rank>;
 
     // FIXME : std::array with NDA
     using target_shape_t = arrays::mini_vector<int, Target::rank>;
@@ -157,13 +154,6 @@ namespace triqs::gfs {
      */
     auto target_indices() const { return itertools::product_range(target().shape()); }
 
-    /** 
-     * Memorylayout of the data
-     *
-     * @category Accessors
-     */
-    memory_layout_t<data_rank> const &memory_layout() const { return _data.indexmap().memory_layout(); }
-
     /// Indices of the Green function (for Python only)
     indices_t const &indices() const { return _indices; }
 
@@ -172,17 +162,13 @@ namespace triqs::gfs {
     data_t _data;
     indices_t _indices;
 
-    using dproxy_t = details::_data_proxy<Target>;
-
     // -------------------------------- impl. details common to all classes -----------------------------------------------
 
     private:
-
     template <typename G> gf_view(impl_tag2, G &&x) : _mesh(x.mesh()), _data(x.data()), _indices(x.indices()) {}
 
     template <typename M, typename D>
-    gf_view(impl_tag, M &&m, D &&dat, indices_t ind)
-       : _mesh(std::forward<M>(m)), _data(std::forward<D>(dat)), _indices(std::move(ind)) {
+    gf_view(impl_tag, M &&m, D &&dat, indices_t ind) : _mesh(std::forward<M>(m)), _data(std::forward<D>(dat)), _indices(std::move(ind)) {
       if (!(_indices.empty() or _indices.has_shape(target_shape()))) TRIQS_RUNTIME_ERROR << "Size of indices mismatch with data size";
     }
 
@@ -318,7 +304,7 @@ namespace triqs::gfs {
       _mesh = mpi::gather(l.rhs.mesh(), l.c, l.root);
       _data = mpi::gather(l.rhs.data(), l.c, l.root, l.all);
     }
-    
+
     // Common code for gf, gf_view, gf_const_view
 #include "./_gf_view_common.hpp"
   };
@@ -328,7 +314,7 @@ namespace triqs::gfs {
  *-----------------------------------------------------------------------------------------------------*/
 
   template <typename M, typename T, typename RHS> void triqs_gf_view_assign_delegation(gf_view<M, T> g, RHS const &rhs) {
-    if constexpr (arrays::is_scalar<RHS>::value) {
+    if constexpr (nda::is_scalar_v<RHS>) {
       for (auto const &w : g.mesh()) g[w] = rhs;
     } else {
       if (!(g.mesh() == rhs.mesh())) TRIQS_RUNTIME_ERROR << "Gf Assignment in View : incompatible mesh \n" << g.mesh() << "\n vs \n" << rhs.mesh();

@@ -26,7 +26,7 @@
 #include <triqs/hilbert_space/state.hpp>
 #include <triqs/hilbert_space/imperative_operator.hpp>
 #include <triqs/hilbert_space/space_partition.hpp>
-#include <triqs/arrays/linalg/eigenelements.hpp>
+#include <nda/linalg/eigenelements.hpp>
 
 using namespace triqs::hilbert_space;
 
