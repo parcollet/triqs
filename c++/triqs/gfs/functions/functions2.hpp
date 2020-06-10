@@ -148,7 +148,7 @@ namespace triqs::gfs {
    */
   template <int N = 0, typename G> auto make_zero_tail(G const &g, int n_moments = 10) {
     if constexpr (is_gf_v<G>) { // gf[_const][_view]<V, T>
-      auto sh = rotate_index_view(make_const_view(g.data()), N).shape();
+      auto sh = rotate_index_view<N>(make_const_view(g.data())).shape();
       sh[0]   = n_moments;
       return arrays::zeros<dcomplex>(sh);
     } else if constexpr (is_block_gf_v<G>) { // block[2]_gf[_const][_view]<V, T>

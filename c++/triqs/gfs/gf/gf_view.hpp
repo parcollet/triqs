@@ -49,7 +49,7 @@ namespace triqs::gfs {
     using view_type = gf_view<Mesh, Target, Layout, EvalPolicy>;
 
     /// Associated regular type (gf<....>)
-    using regular_type = gf<Mesh, Target, Layout, EvalPolicy>;
+    //using regular_type = gf<Mesh, Target, Layout, EvalPolicy>;
 
     /// The associated real type
     using real_t = gf_view<Mesh, typename Target::real_t, Layout, EvalPolicy>;
@@ -82,15 +82,11 @@ namespace triqs::gfs {
     /// Rank of the data array representing the function
     static constexpr int data_rank = arity + Target::rank;
 
-    using data_regular_t    = arrays::array<scalar_t, data_rank>;
-    using data_view_t       = typename data_regular_t::view_type;
-    using data_const_view_t = typename data_regular_t::const_view_type;
-
     /// Type of the data array
-    using data_t = data_view_t;
+    using data_t = nda::basic_array_view<scalar_t, data_rank, Layout>;
 
     // FIXME : std::array with NDA
-    using target_shape_t = arrays::mini_vector<int, Target::rank>;
+    using target_shape_t = std::array<long, Target::rank>;
 
     struct target_and_shape_t {
       target_shape_t _shape;
@@ -138,14 +134,14 @@ namespace triqs::gfs {
     auto const &data_shape() const { return _data.shape(); }
 
     // FIXME : No doc : internal only ? for make_gf
-    target_and_shape_t target() const { return target_and_shape_t{_data.shape().template front_mpop<arity>()}; } // drop arity dims
+    target_and_shape_t target() const { return target_and_shape_t{stdutil::front_mpop<arity>(_data.shape())}; } // drop arity dims
 
     /**
      * Shape of the target
      *
      * @category Accessors
      */
-    arrays::mini_vector<int, Target::rank> target_shape() const { return target().shape(); } // drop arity dims
+    std::array<long, Target::rank> target_shape() const { return target().shape(); } // drop arity dims
 
     /**
      * Generator for the indices of the target space

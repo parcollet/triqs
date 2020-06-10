@@ -307,7 +307,7 @@ namespace triqs {
    @param s2 Second state to multiply
    @return Value of the scalar product
   */
-      friend value_type dot_product(state const &s1, state const &s2) { return dotc(s1.ampli, s2.ampli); }
+      friend value_type dot_product(state const &s1, state const &s2) { return nda::blas::dotc(s1.ampli, s2.ampli); }
 
       /// Apply a callable object to all amplitudes of a state
       /**

@@ -152,8 +152,8 @@ namespace triqs {
         std::vector<quantum_number_t> qn;
         for (auto const &op : qsize) {
           auto y = dot_product(s, op(s));
-          if (std::abs(imag(y)) > 1.e-10) TRIQS_RUNTIME_ERROR << "Quantum number is complex !";
-          qn.push_back(real(y));
+          if (std::abs(std::imag(y)) > 1.e-10) TRIQS_RUNTIME_ERROR << "Quantum number is complex !";
+          qn.push_back(std::real(y));
         }
         return qn;
       };

@@ -48,7 +48,7 @@ namespace triqs {
       gf_indices(vv_t x) : _data(std::move(x)) {}
 
       /// from a shape, make a list of indices '0,1,2,...,r' in all dimensions
-      template <int R, typename Int> gf_indices(arrays::mini_vector<Int, R> const &shape) {
+      template <auto R> gf_indices(std::array<long, R> const &shape) {
         _data.reserve(R);
         for (int i = 0; i < R; i++) _data.push_back(make_vt(shape[i]));
       }
@@ -86,7 +86,7 @@ namespace triqs {
       }
 
       /// True iif the gf_indices is not empty and has the shape sh
-      template <int R, typename Int> bool has_shape(arrays::mini_vector<Int, R> const &sh) {
+      template <auto R, typename Int> bool has_shape(std::array<Int, R> const &sh) {
         if (empty()) return false;
         if (_data.size() != R) return false;
         for (int i = 0; i < R; i++)

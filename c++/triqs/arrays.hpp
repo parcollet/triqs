@@ -25,12 +25,12 @@
 
 #include <assert.h>
 
-#include<complex>
+#include <complex>
 #include <h5/h5.hpp>
 #include <nda/nda.hpp>
 #include <nda/h5.hpp>
 #include <nda/mpi.hpp>
-//#include <nda/blas.hpp>
+#include <nda/blas.hpp>
 #include <nda/lapack.hpp>
 #include <nda/linalg/det_and_inverse.hpp>
 
@@ -45,14 +45,15 @@
 //#define TRIQS_RUNTIME_ERROR NDA_RUNTIME_ERROR
 //#endif
 
+namespace stdutil = nda::stdutil;
 
-namespace triqs { 
+namespace triqs {
 
   namespace clef = nda::clef;
   using dcomplex = std::complex<double>;
   using nda::range;
 
-}
+} // namespace triqs
 
 namespace triqs::utility {
 
@@ -66,45 +67,16 @@ namespace triqs::arrays {
 
   using utility::mini_vector;
 
-  template <typename T> using vector = nda::array<T, 1>;
+  template <typename T>[[deprecated]] nda::matrix<T> make_unit_matrix(int dim) { return nda::eye<T>(dim); }
 
-  template <typename T> using vector_view = nda::array_view<T, 1>;
+  template <typename... T>[[deprecated]] std::array<long, sizeof...(T)> make_shape(T... x) { return {long(x)...}; }
+} // namespace triqs::arrays
 
-  template <typename T>
+namespace nda {
 
-  nda::matrix<T> make_unit_matrix(int dim) {
-    return nda::eye<T>(dim);
+  // Rotate the index n to 0, preserving the relative order of the other indices
+  template <int N, typename A>[[deprecated]] auto rotate_index_view(A &&a) {
+    return permuted_indices_view<encode(nda::permutations::cycle<A::rank>(1, N))>(std::forward<A>(a));
   }
 
-  template <typename... T> mini_vector<size_t, sizeof...(T)> make_shape(T... args) { return {args...}; }
-
-  /*
-   // swap two indices i,j
-    template <typename A>
-    std::enable_if_t<is_amv_value_or_view_class<std::decay_t<A>>::value, typename std::decay_t<A>::view_type> swap_index_view(A &&a, int i, int j) {
-      auto imp = a.indexmap();
-      auto l   = imp.lengths();
-      auto s   = imp.strides();
-      std::swap(l[i], l[j]);
-      std::swap(s[i], s[j]);
-      using r_t = typename std::decay_t<A>::view_type;
-      // FIXME : long only
-      auto imp2 = typename r_t::indexmap_type{l, s, static_cast<ptrdiff_t>(imp.start_shift())};
-      return r_t{imp2, a.storage()};
-    }
-
-    // Rotate the index n to 0, preserving the relative order of the other indices
-    template <typename T, int R> array_const_view<T, R> rotate_index_view(array_const_view<T, R> a, int n) {
-      for (int i = n; i > 0; --i) a.rebind(swap_index_view(a, i - 1, i));
-      return a;
-    }
-
-    // FIXME : regroup
-    // Rotate the index n to 0, preserving the relative order of the other indices
-    template <typename T, int R> array_view<T, R> rotate_index_view(array_view<T, R> a, int n) {
-      for (int i = n; i > 0; --i) a.rebind(swap_index_view(a, i - 1, i));
-      return a;
-    }
-*/
-
-} // namespace triqs::arrays
+} // namespace nda

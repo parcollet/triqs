@@ -28,11 +28,11 @@ namespace triqs::gfs {
 
   using namespace triqs::arrays;
   using mesh::b_zone;
-  using mesh::prod;
   using mesh::cyclat;
   using mesh::imfreq;
   using mesh::imtime;
   using mesh::legendre;
+  using mesh::prod;
   using mesh::refreq;
   using mesh::retime;
 
@@ -115,7 +115,7 @@ namespace triqs::gfs {
     static_assert(std::is_same<typename T1::complex_t, T2>::value, "Incompatible target types for fourier transform");
 
     // pb std::get<0> would not work on a non composite mesh. We use a little lambda to deduce ref and type
-    auto get_out_mesh = [](auto const & gout) -> auto const & { // NB must return a reference
+    auto get_out_mesh = [](auto const &gout) -> auto const & { // NB must return a reference
       using m_t = std::decay_t<decltype(gout.mesh())>;
       if constexpr (mesh::is_product_v<m_t>)
         return std::get<N>(gout.mesh());
@@ -131,7 +131,7 @@ namespace triqs::gfs {
       gout.data() = gout_flatten.data()(_, 0); // gout is scalar, gout_flatten vectorial
     else {
       // inverse operation as flatten_2d, exactly
-      auto g_rot = rotate_index_view(gout.data(), N);
+      auto g_rot = rotate_index_view<N>(gout.data());
       auto a_0   = g_rot(0, _);
       for (auto const &mp : out_mesh) {
         auto g_rot_sl = g_rot(mp.linear_index(), _); // if the array is long, it is faster to precompute the view ...
@@ -259,8 +259,7 @@ namespace triqs::gfs {
   }
 
   template <int N = 0, typename G, typename M, int R>
-  auto make_gf_from_fourier(G const &gin, M const &m, std::vector<std::vector<array<dcomplex, R>>> const &known_moments)
-     REQUIRES(is_block_gf_v<G>) {
+  auto make_gf_from_fourier(G const &gin, M const &m, std::vector<std::vector<array<dcomplex, R>>> const &known_moments) REQUIRES(is_block_gf_v<G>) {
 
     using r_t = decltype(make_gf_from_fourier<N>(gin(0, 0), m, known_moments[0][0]));
     std::vector<std::vector<r_t>> g_vecvec;
@@ -334,6 +333,6 @@ namespace triqs::gfs {
 } // namespace triqs::gfs
 
 // declares the function to accept the clef lazy expressions
-namespace triqs::clef {
+namespace nda::clef {
   TRIQS_CLEF_MAKE_FNT_LAZY(fourier);
-} // namespace triqs::clef
+}
