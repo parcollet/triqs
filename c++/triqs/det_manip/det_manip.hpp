@@ -25,13 +25,13 @@
 #include <iterator>
 #include <numeric>
 #include <cmath>
+//#include <nda/nda.hpp>
 #include <triqs/arrays.hpp>
-#include <triqs/arrays/algorithms.hpp>
-#include <triqs/arrays/linalg/det_and_inverse.hpp>
-#include <triqs/arrays/blas_lapack/dot.hpp>
-#include <triqs/arrays/blas_lapack/ger.hpp>
-#include <triqs/arrays/blas_lapack/gemm.hpp>
-#include <triqs/arrays/blas_lapack/gemv.hpp>
+//#include <triqs/arrays/linalg/det_and_inverse.hpp>
+//#include <triqs/arrays/blas_lapack/dot.hpp>
+//#include <triqs/arrays/blas_lapack/ger.hpp>
+//#include <triqs/arrays/blas_lapack/gemm.hpp>
+//#include <triqs/arrays/blas_lapack/gemv.hpp>
 #include <triqs/utility/function_arg_ret_type.hpp>
 
 namespace triqs {
@@ -54,7 +54,7 @@ namespace triqs {
       // options the det could be kept in a long double to minimize overflow
       //using det_type = std::conditional_t<std::is_same<value_type, double>::value, long double, std::complex<long double>>;
       using det_type = value_type;
-      static_assert(std::is_floating_point<value_type>::value || triqs::is_complex<value_type>::value,
+      static_assert(std::is_floating_point<value_type>::value || nda::is_complex_v<value_type>,
                     "det_manip : the function must return a floating number or a complex number");
 
       using vector_type            = arrays::vector<value_type>;
@@ -752,12 +752,12 @@ namespace triqs {
         {
           range R(0, N);
           if (w1.jreal != N - 1) {
-            arrays::deep_swap(mat_inv(w1.jreal, R), mat_inv(N - 1, R));
+            deep_swap(mat_inv(w1.jreal, R), mat_inv(N - 1, R));
             y_values[w1.jreal] = y_values[N - 1];
           }
 
           if (w1.ireal != N - 1) {
-            arrays::deep_swap(mat_inv(R, w1.ireal), mat_inv(R, N - 1));
+            deep_swap(mat_inv(R, w1.ireal), mat_inv(R, N - 1));
             x_values[w1.ireal] = x_values[N - 1];
           }
         }
@@ -851,19 +851,19 @@ namespace triqs {
         range R(0, N);
 
         if (j_real_max != N - 1) {
-          arrays::deep_swap(mat_inv(j_real_max, R), mat_inv(N - 1, R));
+          deep_swap(mat_inv(j_real_max, R), mat_inv(N - 1, R));
           y_values[j_real_max] = y_values[N - 1];
         }
         if (j_real_min != N - 2) {
-          arrays::deep_swap(mat_inv(j_real_min, R), mat_inv(N - 2, R));
+          deep_swap(mat_inv(j_real_min, R), mat_inv(N - 2, R));
           y_values[j_real_min] = y_values[N - 2];
         }
         if (i_real_max != N - 1) {
-          arrays::deep_swap(mat_inv(R, i_real_max), mat_inv(R, N - 1));
+          deep_swap(mat_inv(R, i_real_max), mat_inv(R, N - 1));
           x_values[i_real_max] = x_values[N - 1];
         }
         if (i_real_min != N - 2) {
-          arrays::deep_swap(mat_inv(R, i_real_min), mat_inv(R, N - 2));
+          deep_swap(mat_inv(R, i_real_min), mat_inv(R, N - 2));
           x_values[i_real_min] = x_values[N - 2];
         }
 

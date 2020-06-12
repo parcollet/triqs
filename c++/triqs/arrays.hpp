@@ -62,6 +62,8 @@ namespace triqs::arrays {
 
   using namespace nda;
 
+  using nda::blas::dot;
+
   using utility::mini_vector;
 
   template <typename T>[[deprecated]] nda::matrix<T> make_unit_matrix(int dim) { return nda::eye<T>(dim); }

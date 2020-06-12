@@ -1,8 +1,8 @@
 #include <triqs/test_tools/arrays.hpp>
 #include <triqs/det_manip/det_manip.hpp>
 #include <random>
-#include <triqs/arrays/linalg/det_and_inverse.hpp>
-#include <triqs/arrays/asserts.hpp>
+#include <nda/linalg/det_and_inverse.hpp>
+//#include <triqs/arrays/asserts.hpp>
 #include <iostream>
 
 struct fun {
