@@ -12,14 +12,16 @@ namespace triqs::mesh {
     clef::placeholder<0> i_;
     std::vector<arrays::vector<int>> units{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
     std::vector<arrays::vector<int>> C{{0, 0, 0}};
-    std::array<long, 3> k_res(3);
+    std::array<long, 3> k_res;
     for (int d = 0; d < 3; d++) {
       k_res[d] = L + 1;
       for (auto const &x : C) {
         for (int k = 1; k <= L; k++) {
           bool OK = false;
           for (int dp = 0; dp < 3; dp++) {
-            double crit = k * inv_n(d, dp) - sum(inv_n(i_, dp) * x(i_), i_ = range(0, 3));
+            double s = 0;
+            for (int i : range(3)) s += inv_n(i, dp) * x(i);
+            double crit = k * inv_n(d, dp) - s; // sum(inv_n(i_, dp) * x(i_), i_ = range(0, 3));
             if (std::abs(crit - int(crit)) > 1e-8) {
               OK = false;
               break;

@@ -40,17 +40,14 @@
 #define TRIQS_CLEF_MAKE_FNT_LAZY CLEF_MAKE_FNT_LAZY
 #define TRIQS_CLEF_IMPLEMENT_LAZY_CALL CLEF_IMPLEMENT_LAZY_CALL
 
-// FIXME
-//#ifndef TRIQS_RUNTIME_ERROR
-//#define TRIQS_RUNTIME_ERROR NDA_RUNTIME_ERROR
-//#endif
-
 namespace stdutil = nda::stdutil;
 
 namespace triqs {
 
   namespace clef = nda::clef;
   using dcomplex = std::complex<double>;
+  using namespace std::literals::complex_literals;
+
   using nda::range;
 
 } // namespace triqs
@@ -76,7 +73,7 @@ namespace nda {
 
   // Rotate the index n to 0, preserving the relative order of the other indices
   template <int N, typename A>[[deprecated]] auto rotate_index_view(A &&a) {
-    return permuted_indices_view<encode(nda::permutations::cycle<A::rank>(1, N))>(std::forward<A>(a));
+    return permuted_indices_view<encode(nda::permutations::cycle<get_rank<A>>(1, N))>(std::forward<A>(a));
   }
 
 } // namespace nda

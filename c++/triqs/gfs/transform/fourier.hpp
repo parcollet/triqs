@@ -279,7 +279,7 @@ namespace triqs::gfs {
 
   template <int N = 0, int... Ns, typename G, typename... Args>
   auto make_gf_from_fourier(G const &gin, Args const &... args) REQUIRES(is_block_gf_v<G>) {
-    auto l = [&](typename G::g_t::const_view_type g_bl) { return make_gf_from_fourier<N, Ns...>(make_const_view(g_bl), args...); };
+    auto l = [&](auto&& g_bl) { return make_gf_from_fourier<N, Ns...>(make_const_view(g_bl), args...); };
     return map_block_gf(l, gin);
   }
 

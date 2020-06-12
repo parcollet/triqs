@@ -19,6 +19,8 @@
  *
  ******************************************************************************/
 #pragma once
+#include "./macros.hpp"
+
 namespace triqs {
   namespace utility {
 

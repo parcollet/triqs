@@ -192,8 +192,8 @@ namespace triqs::mesh {
      * @param known_moments  Array of the known_moments
      * */
     // FIXME : nda : use dynamic Rank here.
-    template <bool enforce_hermiticity = false, typename M, int R, int R2 = R>
-    std::pair<arrays::array<dcomplex, R>, double> fit(M const &m, array_const_view<dcomplex, R> g_data, int n, bool normalize,
+    template <int N, bool enforce_hermiticity = false, typename M, int R, int R2 = R>
+    std::pair<arrays::array<dcomplex, R>, double> fit(M const &m, array_const_view<dcomplex, R> g_data, bool normalize,
                                                       array_const_view<dcomplex, R2> known_moments, std::optional<long> inner_matrix_dim = {}) {
 
       if (enforce_hermiticity and not inner_matrix_dim.has_value())
@@ -216,7 +216,7 @@ namespace triqs::mesh {
       using triqs::arrays::ellipsis;
 
       // The values of the Green function. Swap relevant mesh to front
-      auto g_data_swap_idx = rotate_index_view(g_data, n);
+      auto g_data_swap_idx = rotate_index_view<N>(g_data);
       auto const &imp      = g_data_swap_idx.indexmap();
       long ncols           = imp.size() / imp.lengths()[0];
 
@@ -278,23 +278,25 @@ namespace triqs::mesh {
 
       // Index map for the view on the a_mat result
       lg[0]     = n_moments - n_fixed_moments;
-      auto imp1 = typename r_t::indexmap_type{typename r_t::indexmap_type::domain_type{lg}};
+      auto imp1 = typename r_t::layout_t{lg};
+      //auto imp1 = typename r_t::indexmap_type{typename r_t::indexmap_type::domain_type{lg}};
 
       // Index map for the full result
       lg[0]    = n_moments;
-      auto res = r_t(typename r_t::indexmap_type::domain_type{lg});
+      auto res = r_t(lg);
 
       if (n_fixed_moments) res(range(n_fixed_moments), ellipsis()) = known_moments;
-      res(range(n_fixed_moments, n_moments), ellipsis()) = typename r_t::view_type{imp1, a_mat.storage()};
+      res(range(n_fixed_moments, n_moments), ellipsis()) = nda::array_view<dcomplex, R>{imp1, a_mat.storage()};
+      //res(range(n_fixed_moments, n_moments), ellipsis()) = typename r_t::view_type{imp1, a_mat.storage()};
 
       return {std::move(res), epsilon};
     }
 
-    template <typename M, int R, int R2 = R>
-    std::pair<arrays::array<dcomplex, R>, double> fit_hermitian(M const &m, array_const_view<dcomplex, R> g_data, int n, bool normalize,
+    template <int N, typename M, int R, int R2 = R>
+    std::pair<arrays::array<dcomplex, R>, double> fit_hermitian(M const &m, array_const_view<dcomplex, R> g_data, bool normalize,
                                                                 array_const_view<dcomplex, R2> known_moments,
                                                                 std::optional<long> inner_matrix_dim = {}) {
-      return fit<true, M, R, R2>(m, g_data, n, normalize, known_moments, inner_matrix_dim);
+      return fit<N, true, M, R, R2>(m, g_data, normalize, known_moments, inner_matrix_dim);
     }
   };
 

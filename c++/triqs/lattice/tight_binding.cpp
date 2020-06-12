@@ -19,8 +19,8 @@
  *
  ******************************************************************************/
 #include "tight_binding.hpp"
-#include <triqs/arrays/algorithms.hpp>
-#include <triqs/arrays/linalg/eigenelements.hpp>
+#include <nda/algorithms.hpp>
+#include <nda/linalg/eigenelements.hpp>
 #include "grid_generator.hpp"
 namespace triqs {
   namespace lattice {

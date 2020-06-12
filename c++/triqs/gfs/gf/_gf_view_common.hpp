@@ -40,29 +40,56 @@ template <typename... Args> decltype(auto) operator()(Args &&... args) && {
 // ------------- All the [] operators without lazy arguments -----------------------------
 
 private:
-inline static constexpr std::index_sequence<arity> _seq;
+//inline static constexpr std::index_sequence<arity> _seq;
 
-template <auto... Is, typename Tu> FORCEINLINE decltype(auto) call_data_flatten_tuple(Tu const &tu) {
-  static_assert(std::tuple_size_v<Tu> == sizeof...(Is), "Internal logic error");
-  return _data(ellipsis{}, std::get<Is>(tu)...);
+FORCEINLINE decltype(auto) call_data(long i) {
+  if constexpr (data_rank == 1)
+    return _data(i); // FIXME avoid the current bug with zero size ellipsis. But it is also simpler to compile in simple cases..
+  else
+    return _data(i, ellipsis{});
+}
+
+// FIXME C++20 lambda
+template <auto... Is, typename Tu> FORCEINLINE decltype(auto) call_data_impl(std::index_sequence<Is...>, Tu const &tu) {
+  if constexpr (data_rank == sizeof...(Is))
+    return _data(std::get<Is>(tu)...);
+  else
+    return _data(std::get<Is>(tu)..., ellipsis{});
+}
+
+template <typename... T> FORCEINLINE decltype(auto) call_data(std::tuple<T...> const &tu) {
+  return call_data_impl(std::make_index_sequence<sizeof...(T)>{}, tu);
+}
+
+FORCEINLINE decltype(auto) call_data(long i) const {
+  if constexpr (data_rank == 1)
+    return _data(i); // FIXME avoid the current bug with zero size ellipsis. But it is also simpler to compile in simple cases..
+  else
+    return _data(i, ellipsis{});
+}
+
+// FIXME C++20 lambda
+template <auto... Is, typename Tu> FORCEINLINE decltype(auto) call_data_impl(std::index_sequence<Is...>, Tu const &tu) const {
+  if constexpr (data_rank == sizeof...(Is))
+    return _data(std::get<Is>(tu)...);
+  else
+    return _data(std::get<Is>(tu)..., ellipsis{});
+}
+
+template <typename... T> FORCEINLINE decltype(auto) call_data(std::tuple<T...> const &tu) const {
+  return call_data_impl(std::make_index_sequence<sizeof...(T)>{}, tu);
 }
 
 public:
 // pass a index_t of the mesh
 decltype(auto) operator[](mesh_index_t const &arg) {
   EXPECTS(_mesh.is_within_boundary(arg));
-  if constexpr (arity == 1)
-    return _data(_mesh.index_to_linear(arg));
-  else
-    return call_data_flatten_tuple(_mesh.index_to_linear(arg));
+  return call_data(_mesh.index_to_linear(arg));
 }
 
 decltype(auto) operator[](mesh_index_t const &arg) const {
   EXPECTS(_mesh.is_within_boundary(arg));
-  if constexpr (arity == 1)
-    return _data(_mesh.index_to_linear(arg));
-  else
-    return call_data_flatten_tuple(_mesh.index_to_linear(arg));
+  return call_data(_mesh.index_to_linear(arg));
 }
 
 // pass a mesh_point of the mesh
@@ -70,20 +97,14 @@ decltype(auto) operator[](mesh_point_t const &x) {
 #ifdef TRIQS_DEBUG
   if (!mesh_point_compatible_to_mesh(x, _mesh)) TRIQS_RUNTIME_ERROR << "gf[ ] : mesh point's mesh and gf's mesh mismatch";
 #endif
-  if constexpr (arity == 1)
-    return _data(x.linear_index());
-  else
-    return call_data_flatten_tuple(x.linear_index());
+  return call_data(x.linear_index());
 }
 
 decltype(auto) operator[](mesh_point_t const &x) const {
 #ifdef TRIQS_DEBUG
   if (!mesh_point_compatible_to_mesh(x, _mesh)) TRIQS_RUNTIME_ERROR << "gf[ ] : mesh point's mesh and gf's mesh mismatch";
 #endif
-  if constexpr (arity == 1)
-    return _data(x.linear_index());
-  else
-    return call_data_flatten_tuple(x.linear_index());
+  return call_data(x.linear_index());
 }
 
 private:
@@ -92,16 +113,10 @@ using cp_worker = mesh::closest_point<Mesh, Target>;
 public:
 // pass an abtract closest_point. We extract the value of the domain from p, call the gf_closest_point trait
 template <typename... U> decltype(auto) operator[](closest_pt_wrap<U...> const &p) {
-  if constexpr (arity == 1)
-    return _data(_mesh.index_to_linear(cp_worker::invoke(this->mesh(), p)));
-  else
-    return call_data_flatten_tuple(_mesh.index_to_linear(cp_worker::invoke(_mesh, p)));
+  return call_data(_mesh.index_to_linear(cp_worker::invoke(_mesh, p)));
 }
 template <typename... U> decltype(auto) operator[](closest_pt_wrap<U...> const &p) const {
-  if constexpr (arity == 1)
-    return _data(_mesh.index_to_linear(cp_worker::invoke(this->mesh(), p)));
-  else
-    return call_data_flatten_tuple(_mesh.index_to_linear(cp_worker::invoke(_mesh, p)));
+  return call_data(_mesh.index_to_linear(cp_worker::invoke(_mesh, p)));
 }
 
 // -------------- operator [] with tuple_com. Distinguich the lazy and non lazy case
@@ -141,46 +156,34 @@ template <typename... U> decltype(auto) operator[](tuple_com<U...> const &tu) &&
 
 // ------------- [] with lazy arguments -----------------------------
 
-template <typename Arg> auto operator[](Arg &&arg) const & REQUIRES(clef::is_any_lazy<Arg>) {
+template <typename Arg> auto operator[](Arg &&arg) const &REQUIRES(clef::is_any_lazy<Arg>) {
   return clef::make_expr_subscript(*this, std::forward<Arg>(arg));
 }
 
-template <typename Arg> auto operator[](Arg &&arg) & REQUIRES(clef::is_any_lazy<Arg>){
+template <typename Arg> auto operator[](Arg &&arg) & REQUIRES(clef::is_any_lazy<Arg>) {
   return clef::make_expr_subscript(*this, std::forward<Arg>(arg));
 }
 
-template <typename Arg> auto operator[](Arg &&arg) && REQUIRES(clef::is_any_lazy<Arg>){
+template <typename Arg> auto operator[](Arg &&arg) && REQUIRES(clef::is_any_lazy<Arg>) {
   return clef::make_expr_subscript(std::move(*this), std::forward<Arg>(arg));
 }
 
 // --------------------- A direct access to the grid point --------------------------
 
 template <typename... Args> FORCEINLINE decltype(auto) on_mesh(Args &&... args) {
-  if constexpr (arity == 1)
-    return _data(_mesh.index_to_linear(mesh_index_t(std::forward<Args>(args)...)));
-  else
-    return call_data_flatten_tuple(mesh_index_t(std::forward<Args>(args)...));
+  return call_data(_mesh.index_to_linear(mesh_index_t(std::forward<Args>(args)...)));
 }
 
 template <typename... Args> FORCEINLINE decltype(auto) on_mesh(Args &&... args) const {
-  if constexpr (arity == 1)
-    return _data(_mesh.index_to_linear(mesh_index_t(std::forward<Args>(args)...)));
-  else
-    return call_data_flatten_tuple(mesh_index_t(std::forward<Args>(args)...));
+  return call_data(_mesh.index_to_linear(mesh_index_t(std::forward<Args>(args)...)));
 }
 
 template <typename... Args> FORCEINLINE decltype(auto) on_mesh_from_linear_index(Args &&... args) {
-  if constexpr (arity == 1)
-    return _data(_mesh.index_to_linear(linear_mesh_index_t(std::forward<Args>(args)...)));
-  else
-    return call_data_flatten_tuple(linear_mesh_index_t(std::forward<Args>(args)...));
+  return call_data(_mesh.index_to_linear(linear_mesh_index_t(std::forward<Args>(args)...)));
 }
 
 template <typename... Args> FORCEINLINE decltype(auto) on_mesh_from_linear_index(Args &&... args) const {
-  if constexpr (arity == 1)
-    return _data(_mesh.index_to_linear(linear_mesh_index_t(std::forward<Args>(args)...)));
-  else
-    return call_data_flatten_tuple(linear_mesh_index_t(std::forward<Args>(args)...));
+  return call_data(_mesh.index_to_linear(linear_mesh_index_t(std::forward<Args>(args)...)));
 }
 
 //----------------------------- HDF5 -----------------------------
