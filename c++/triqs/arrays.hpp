@@ -33,6 +33,7 @@
 #include <nda/blas.hpp>
 #include <nda/lapack.hpp>
 #include <nda/linalg/det_and_inverse.hpp>
+#include <nda/clef/adapters/math.hpp>
 
 #include "utility/concept_tools.hpp"
 #include "utility/exceptions.hpp"

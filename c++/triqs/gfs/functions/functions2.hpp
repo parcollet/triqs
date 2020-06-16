@@ -25,6 +25,25 @@
 
 namespace triqs::gfs {
 
+  // FIXME : refactor this ?
+  // fIXME : THe layout has to be deducted and C layout -> C Stride 
+  /// make_const_view
+  //template <typename M, typename T, typename L, typename E> gf_const_view<M, T, L, E> make_const_view(gf<M, T, L, E> const &g) { return {g}; }
+
+  //template <typename M, typename T, typename L, typename E> gf_const_view<M, T, L, E> make_const_view(gf_view<M, T, L, E> g) { return {g}; }
+
+  //template <typename M, typename T, typename L, typename E> gf_const_view<M, T, L, E> make_const_view(gf_const_view<M, T, L, E> g) {
+    //return g;
+  //}
+
+  template <typename M, typename T> gf_const_view<M, T> make_const_view(gf<M, T> const &g) { return {g}; }
+
+  template <typename M, typename T> gf_const_view<M, T> make_const_view(gf_view<M, T> g) { return {g}; }
+
+  template <typename M, typename T> gf_const_view<M, T> make_const_view(gf_const_view<M, T> g) {
+    return g;
+  }
+
   using triqs::arrays::array_const_view;
 
   /*------------------------------------------------------------------------------------------------------
@@ -48,9 +67,11 @@ namespace triqs::gfs {
   std::pair<typename A::regular_type, double> fit_tail(G const &g, A const &known_moments = {}) REQUIRES(is_gf_v<G>) {
     if constexpr (mesh::is_product_v<typename G::mesh_t>) { // product mesh
       auto const &m = std::get<N>(g.mesh());
-      return m.get_tail_fitter().template fit<N>(m, make_const_view(g.data()), true, make_const_view(known_moments));
+      return m.get_tail_fitter().template fit<N>(m, make_array_const_view(g.data()), true,
+                                                 make_array_const_view(known_moments));
     } else { // single mesh
-      return g.mesh().get_tail_fitter().template fit<0>(g.mesh(), make_const_view(g.data()), true, make_const_view(known_moments));
+      return g.mesh().get_tail_fitter().template fit<0>(g.mesh(), make_array_const_view(g.data()), true,
+                                                        make_array_const_view(known_moments));
     }
   }
 
@@ -132,8 +153,9 @@ namespace triqs::gfs {
   }
 
   // Tail-fit without normalization, returns moments rescaled by maximum frequency:  a_n * omega_max^n
-  template <template <typename, typename> typename G, typename V, typename T> auto fit_tail_no_normalize(G<V, T> const &g) {
-    return g.mesh().get_tail_fitter().fit(g.mesh(), make_const_view(g.data()), 0, false, array_const_view<dcomplex, G<V, T>::data_rank>{});
+  template <template <typename, typename, typename...> typename G, typename V, typename T, typename... U>
+  auto fit_tail_no_normalize(G<V, T, U...> const &g) {
+    return g.mesh().get_tail_fitter().template fit<0>(g.mesh(), make_array_const_view(g.data()), false, array_const_view<dcomplex, G<V, T, U...>::data_rank>{});
   }
 
   /**
@@ -193,8 +215,8 @@ namespace triqs::gfs {
 
   // auxiliary function : invert the data : one function for all matrix valued gf (save code).
   template <typename M> void invert_in_place(gf_view<M, matrix_valued> g) {
-    auto &a  = g.data();
-    auto mesh_lengths = stdutil::mpop<2>(a.indexmap().lengths()); 
+    auto &a           = g.data();
+    auto mesh_lengths = stdutil::mpop<2>(a.indexmap().lengths());
     nda::for_each(mesh_lengths, [&a, _ = nda::range()](auto &&... i) { nda::inverse_in_place(make_matrix_view(a(i..., _, _))); });
   }
 

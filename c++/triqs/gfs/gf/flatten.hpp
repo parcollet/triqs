@@ -9,21 +9,20 @@ namespace triqs::gfs {
    *
    * @return : a matrix, copy of the data
    * */
-  template <typename T, int R> array<T, 2> flatten_2d(array_const_view<T, R> a, int n) {
+  template <int N, typename T, int R> array<T, 2> flatten_2d(array_const_view<T, R> a) {
 
     if (a.is_empty()) return array<T, 2>{};
-    a.rebind(rotate_index_view(a, n));    // Swap relevant dim to front. The view is passed by value, we modify it.
+    a.rebind(rotate_index_view<N>(a));    // Swap relevant dim to front. The view is passed by value, we modify it.
     long nrows = first_dim(a);            // # rows of the result, i.e. n-th dim, which is now at 0.
     long ncols = a.size() / nrows;        // # columns of the result. Everything but n-th dim.
     array<T, 2> mat(first_dim(a), ncols); // result
 
-    auto a_0 = a(0, ellipsis()); // FIXME for_each should take only the lengths ...
+    auto a_0 = a(0, ellipsis()); 
     for (long n : range(first_dim(a))) {
       if constexpr (R == 1)
         mat(n, 0) = a(n);
       else
-        foreach (a_0, [&a, &mat, n, c = 0ll](auto &&... i) mutable { mat(n, c++) = a(n, i...); })
-          ;
+        nda::for_each(a_0.indexmap().lengths(), [&a, &mat, n, c = 0ll](auto &&... i) mutable { mat(n, c++) = a(n, i...); });
     }
     return std::move(mat);
   }
@@ -32,19 +31,20 @@ namespace triqs::gfs {
 
   template <int N, typename... Ms, typename Target> auto flatten_gf_2d(gf_const_view<mesh::prod<Ms...>, Target> g) {
     auto const &m = std::get<N>(g.mesh());
-    using gf_t = gf<std::decay_t<decltype(m)>, tensor_valued<1>>;
+    using gf_t    = gf<std::decay_t<decltype(m)>, tensor_valued<1>>;
     if constexpr (Target::is_real) // FIXME Remove hard-copy once real fourier is implemented
-      return gf_t{m, array<dcomplex, 2>(flatten_2d(g.data(), N)), {}};
+      return gf_t{
+         m, array<dcomplex, 2>(flatten_2d<N>(make_array_const_view(g.data()))), {}}; // FIXME : all the make_array_const_view : fix flatten_2d
     else
-      return gf_t{m, flatten_2d(g.data(), N), {}};
+      return gf_t{m, flatten_2d<N>(make_array_const_view(g.data())), {}};
   }
 
   template <int N, typename Mesh, typename Target> gf<Mesh, tensor_valued<1>> flatten_gf_2d(gf_const_view<Mesh, Target> g) {
     static_assert(N == 0, "Internal error");
     if constexpr (Target::is_real) // FIXME Remove hard-copy once real fourier is implemented
-      return {g.mesh(), array<dcomplex, 2>(flatten_2d(g.data(), 0)), {}};
+      return {g.mesh(), array<dcomplex, 2>(flatten_2d<0>(make_array_const_view(g.data()))), {}};
     else
-      return {g.mesh(), flatten_2d(g.data(), 0), {}};
+      return {g.mesh(), flatten_2d<0>(make_array_const_view(g.data())), {}};
   }
 
 } // namespace triqs::gfs

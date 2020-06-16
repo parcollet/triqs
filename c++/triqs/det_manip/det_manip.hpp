@@ -552,8 +552,8 @@ namespace triqs {
         }
 
         range R1(0, N);
-        //w1.MC(R1) = mat_inv(R1,R1).transpose() * w1.C(R1); //OPTIMIZE BELOW
-        blas::gemv(1.0, mat_inv(R1, R1).transpose(), w1.C(R1), 0.0, w1.MC(R1));
+        //w1.MC(R1) = transpose(mat_inv(R1,R1)) * w1.C(R1); //OPTIMIZE BELOW
+        blas::gemv(1.0, transpose(mat_inv(R1, R1)), w1.C(R1), 0.0, w1.MC(R1));
         w1.MC(N) = -1;
         w1.MB(N) = -1;
 
@@ -966,8 +966,8 @@ namespace triqs {
         // Compute the col B.
         for (size_t i = 0; i < N; i++) w1.MB(i) = f(w1.x, y_values[i]) - f(x_values[w1.ireal], y_values[i]);
         range R(0, N);
-        //w1.MC(R) = mat_inv(R,R).transpose() * w1.MB(R); // OPTIMIZE BELOW
-        blas::gemv(1.0, mat_inv(R, R).transpose(), w1.MB(R), 0.0, w1.MC(R));
+        //w1.MC(R) = transpose(mat_inv(R,R)) * w1.MB(R); // OPTIMIZE BELOW
+        blas::gemv(1.0, transpose(mat_inv(R, R)), w1.MB(R), 0.0, w1.MC(R));
 
         // compute the newdet
         w1.ksi   = (1 + w1.MC(w1.ireal));
@@ -1027,8 +1027,8 @@ namespace triqs {
         // C : X, B : Y
         //w1.C(R) = mat_inv(R,R) * w1.MC(R);// OPTIMIZE BELOW
         blas::gemv(1.0, mat_inv(R, R), w1.MC(R), 0.0, w1.C(R));
-        //w1.B(R) = mat_inv(R,R).transpose() * w1.MB(R); // OPTIMIZE BELOW
-        blas::gemv(1.0, mat_inv(R, R).transpose(), w1.MB(R), 0.0, w1.B(R));
+        //w1.B(R) = transpose(mat_inv(R,R)) * w1.MB(R); // OPTIMIZE BELOW
+        blas::gemv(1.0, transpose(mat_inv(R, R)), w1.MB(R), 0.0, w1.B(R));
 
         // compute the det_ratio
         auto Xn        = w1.C(w1.jreal);

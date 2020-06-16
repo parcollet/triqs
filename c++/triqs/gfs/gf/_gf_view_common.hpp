@@ -40,56 +40,38 @@ template <typename... Args> decltype(auto) operator()(Args &&... args) && {
 // ------------- All the [] operators without lazy arguments -----------------------------
 
 private:
-//inline static constexpr std::index_sequence<arity> _seq;
+#ifdef NDA_ENFORCE_BOUNDCHECK
+static constexpr bool has_no_boundcheck = false;
+#else
+static constexpr bool has_no_boundcheck = true;
+#endif
 
-FORCEINLINE decltype(auto) call_data(long i) {
-  if constexpr (data_rank == 1)
-    return _data(i); // FIXME avoid the current bug with zero size ellipsis. But it is also simpler to compile in simple cases..
-  else
-    return _data(i, ellipsis{});
+// Self can not be a rvalue, since we return a view !
+// similar coding as for nda
+template <typename Self> FORCEINLINE static decltype(auto) call_data(Self &&self, long i) noexcept(has_no_boundcheck) {
+  return data_t::template call<(target_t::is_matrix ? 'M' : 'A'), false>(std::forward<Self>(self)._data, i, ellipsis{});
 }
 
-// FIXME C++20 lambda
-template <auto... Is, typename Tu> FORCEINLINE decltype(auto) call_data_impl(std::index_sequence<Is...>, Tu const &tu) {
-  if constexpr (data_rank == sizeof...(Is))
-    return _data(std::get<Is>(tu)...);
-  else
-    return _data(std::get<Is>(tu)..., ellipsis{});
+template <typename Self, auto... Is, typename Tu>
+FORCEINLINE static decltype(auto) call_data_impl(Self &&self, std::index_sequence<Is...>, Tu const &tu) noexcept(has_no_boundcheck) {
+  return data_t::template call<(target_t::is_matrix ? 'M' : 'A'), false>(std::forward<Self>(self)._data, std::get<Is>(tu)..., ellipsis{});
 }
 
-template <typename... T> FORCEINLINE decltype(auto) call_data(std::tuple<T...> const &tu) {
-  return call_data_impl(std::make_index_sequence<sizeof...(T)>{}, tu);
-}
-
-FORCEINLINE decltype(auto) call_data(long i) const {
-  if constexpr (data_rank == 1)
-    return _data(i); // FIXME avoid the current bug with zero size ellipsis. But it is also simpler to compile in simple cases..
-  else
-    return _data(i, ellipsis{});
-}
-
-// FIXME C++20 lambda
-template <auto... Is, typename Tu> FORCEINLINE decltype(auto) call_data_impl(std::index_sequence<Is...>, Tu const &tu) const {
-  if constexpr (data_rank == sizeof...(Is))
-    return _data(std::get<Is>(tu)...);
-  else
-    return _data(std::get<Is>(tu)..., ellipsis{});
-}
-
-template <typename... T> FORCEINLINE decltype(auto) call_data(std::tuple<T...> const &tu) const {
-  return call_data_impl(std::make_index_sequence<sizeof...(T)>{}, tu);
+template <typename Self, typename... T>
+FORCEINLINE static decltype(auto) call_data(Self &&self, std::tuple<T...> const &tu) noexcept(has_no_boundcheck) {
+  return call_data_impl(std::forward<Self>(self), std::make_index_sequence<sizeof...(T)>{}, tu);
 }
 
 public:
 // pass a index_t of the mesh
 decltype(auto) operator[](mesh_index_t const &arg) {
   EXPECTS(_mesh.is_within_boundary(arg));
-  return call_data(_mesh.index_to_linear(arg));
+  return call_data(*this, _mesh.index_to_linear(arg));
 }
 
 decltype(auto) operator[](mesh_index_t const &arg) const {
   EXPECTS(_mesh.is_within_boundary(arg));
-  return call_data(_mesh.index_to_linear(arg));
+  return call_data(*this, _mesh.index_to_linear(arg));
 }
 
 // pass a mesh_point of the mesh
@@ -97,14 +79,14 @@ decltype(auto) operator[](mesh_point_t const &x) {
 #ifdef TRIQS_DEBUG
   if (!mesh_point_compatible_to_mesh(x, _mesh)) TRIQS_RUNTIME_ERROR << "gf[ ] : mesh point's mesh and gf's mesh mismatch";
 #endif
-  return call_data(x.linear_index());
+  return call_data(*this, x.linear_index());
 }
 
 decltype(auto) operator[](mesh_point_t const &x) const {
 #ifdef TRIQS_DEBUG
   if (!mesh_point_compatible_to_mesh(x, _mesh)) TRIQS_RUNTIME_ERROR << "gf[ ] : mesh point's mesh and gf's mesh mismatch";
 #endif
-  return call_data(x.linear_index());
+  return call_data(*this, x.linear_index());
 }
 
 private:
@@ -113,10 +95,10 @@ using cp_worker = mesh::closest_point<Mesh, Target>;
 public:
 // pass an abtract closest_point. We extract the value of the domain from p, call the gf_closest_point trait
 template <typename... U> decltype(auto) operator[](closest_pt_wrap<U...> const &p) {
-  return call_data(_mesh.index_to_linear(cp_worker::invoke(_mesh, p)));
+  return call_data(*this, _mesh.index_to_linear(cp_worker::invoke(_mesh, p)));
 }
 template <typename... U> decltype(auto) operator[](closest_pt_wrap<U...> const &p) const {
-  return call_data(_mesh.index_to_linear(cp_worker::invoke(_mesh, p)));
+  return call_data(*this, _mesh.index_to_linear(cp_worker::invoke(_mesh, p)));
 }
 
 // -------------- operator [] with tuple_com. Distinguich the lazy and non lazy case
@@ -171,19 +153,19 @@ template <typename Arg> auto operator[](Arg &&arg) && REQUIRES(clef::is_any_lazy
 // --------------------- A direct access to the grid point --------------------------
 
 template <typename... Args> FORCEINLINE decltype(auto) on_mesh(Args &&... args) {
-  return call_data(_mesh.index_to_linear(mesh_index_t(std::forward<Args>(args)...)));
+  return call_data(*this, _mesh.index_to_linear(mesh_index_t(std::forward<Args>(args)...)));
 }
 
 template <typename... Args> FORCEINLINE decltype(auto) on_mesh(Args &&... args) const {
-  return call_data(_mesh.index_to_linear(mesh_index_t(std::forward<Args>(args)...)));
+  return call_data(*this, _mesh.index_to_linear(mesh_index_t(std::forward<Args>(args)...)));
 }
 
 template <typename... Args> FORCEINLINE decltype(auto) on_mesh_from_linear_index(Args &&... args) {
-  return call_data(_mesh.index_to_linear(linear_mesh_index_t(std::forward<Args>(args)...)));
+  return call_data(*this, _mesh.index_to_linear(linear_mesh_index_t(std::forward<Args>(args)...)));
 }
 
 template <typename... Args> FORCEINLINE decltype(auto) on_mesh_from_linear_index(Args &&... args) const {
-  return call_data(_mesh.index_to_linear(linear_mesh_index_t(std::forward<Args>(args)...)));
+  return call_data(*this, _mesh.index_to_linear(linear_mesh_index_t(std::forward<Args>(args)...)));
 }
 
 //----------------------------- HDF5 -----------------------------

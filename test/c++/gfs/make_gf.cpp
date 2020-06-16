@@ -6,6 +6,8 @@ using namespace triqs::clef;
 placeholder<0> iw;
 double beta = 1.0;
 
+//-----------------------------
+
 TEST(make_gf, from_view) {
 
   // Create and intialize G1
@@ -17,6 +19,26 @@ TEST(make_gf, from_view) {
 
   EXPECT_GF_NEAR(G1, G2);
 }
+
+//-----------------------------
+
+TEST(make_gf, from_mesh_and_target) {
+
+  // Create and intialize G1
+  gf<imfreq> G1{{beta, Fermion, 5}, {2, 2}};
+  G1[iw] << 1.0 / iw;
+
+  // Create G2 with same mesh and target as G1
+  auto G2 = make_gf(G1.mesh(), G1.target());
+
+  // Fill G2 with same values as G1
+  G2() = G1;
+
+  EXPECT_GF_NEAR(G1, G2);
+}
+
+//-----------------------------
+#if 0
 
 TEST(make_gf, new_layout) {
 
@@ -36,20 +58,7 @@ TEST(make_gf, new_layout) {
   EXPECT_GF_NEAR(G1, G2);
 }
 
-TEST(make_gf, from_mesh_and_target) {
-
-  // Create and intialize G1
-  gf<imfreq> G1{{beta, Fermion, 5}, {2, 2}};
-  G1[iw] << 1.0 / iw;
-
-  // Create G2 with same mesh and target as G1
-  auto G2 = make_gf(G1.mesh(), G1.target());
-
-  // Fill G2 with same values as G1
-  G2() = G1;
-
-  EXPECT_GF_NEAR(G1, G2);
-}
+//-----------------------------
 
 TEST(make_gf, from_mesh_target_and_layout) {
 
@@ -67,5 +76,7 @@ TEST(make_gf, from_mesh_target_and_layout) {
   EXPECT_EQ(G2.memory_layout(), make_memory_layout(1, 0, 2));
   EXPECT_GF_NEAR(G1, G2);
 }
+
+#endif
 
 MAKE_MAIN;

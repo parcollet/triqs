@@ -1,6 +1,7 @@
 #include <triqs/det_manip/det_manip.hpp>
 #include <triqs/mc_tools/random_generator.hpp>
-#include <triqs/arrays/linalg/det_and_inverse.hpp>
+#include <nda/linalg/det_and_inverse.hpp>
+
 #include <triqs/arrays/asserts.hpp>
 #include <iostream>
 #include <triqs/std_addons/complex.hpp>

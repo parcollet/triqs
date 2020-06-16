@@ -125,7 +125,7 @@ namespace triqs::gfs {
 
     auto const &out_mesh = get_out_mesh(gout);
 
-    auto gout_flatten = _fourier_impl(out_mesh, flatten_gf_2d<N>(gin), flatten_2d(make_const_view(opt_args), 0)...);
+    auto gout_flatten = _fourier_impl(out_mesh, flatten_gf_2d<N>(gin), flatten_2d<0>(make_array_const_view(opt_args))...);
     auto _            = ellipsis();
     if constexpr (gin.data_rank == 1)
       gout.data() = gout_flatten.data()(_, 0); // gout is scalar, gout_flatten vectorial
@@ -294,7 +294,8 @@ namespace triqs::gfs {
   }
 
   template <int N = 0, int... Ns, typename V, typename T, typename... Args> auto make_gf_from_fourier(gf<V, T> const &gin, Args &&... args) {
-    return make_gf_from_fourier<N, Ns...>(make_const_view(gin), std::forward<Args>(args)...);
+    return make_gf_from_fourier<N, Ns...>(gf_const_view{gin}, std::forward<Args>(args)...);
+//    return make_gf_from_fourier<N, Ns...>(make_const_view(gin), std::forward<Args>(args)...);
   }
 
   /*------------------------------------------------------------------------------------------------------

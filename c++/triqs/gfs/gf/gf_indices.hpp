@@ -126,7 +126,7 @@ namespace triqs {
       // ------------------  implement slicing -------------------------
       private:
       // slice one vector with the range r
-      int slice_one_vec(vv_t &v_out, v_t const &v_in, itertools::range const &r) const {
+      int slice_one_vec(vv_t &v_out, v_t const &v_in, nda::range const &r) const {
         v_t res;
         for (auto i : r) res.push_back(v_in[i]);
         v_out.push_back(res);
@@ -143,7 +143,7 @@ namespace triqs {
       }
 
       public:
-      /// Slicing. R are expected to be itertools::range
+      /// Slicing. R are expected to be nda::range
       template <typename... R> friend gf_indices slice(gf_indices const &gi, R const &... r) {
         if (gi.empty()) return {};
         if (gi.rank() != sizeof...(R)) TRIQS_RUNTIME_ERROR << " Incorrect slicing of indices ";
