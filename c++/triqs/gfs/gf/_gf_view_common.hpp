@@ -161,11 +161,11 @@ template <typename... Args> FORCEINLINE decltype(auto) on_mesh(Args &&... args) 
 }
 
 template <typename... Args> FORCEINLINE decltype(auto) on_mesh_from_linear_index(Args &&... args) {
-  return call_data(*this, _mesh.index_to_linear(linear_mesh_index_t(std::forward<Args>(args)...)));
+  return call_data(*this, linear_mesh_index_t(std::forward<Args>(args)...));
 }
 
 template <typename... Args> FORCEINLINE decltype(auto) on_mesh_from_linear_index(Args &&... args) const {
-  return call_data(*this, _mesh.index_to_linear(linear_mesh_index_t(std::forward<Args>(args)...)));
+  return call_data(*this, linear_mesh_index_t(std::forward<Args>(args)...));
 }
 
 //----------------------------- HDF5 -----------------------------

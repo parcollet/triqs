@@ -68,7 +68,7 @@ namespace triqs::gfs {
       auto res   = arrays::zeros<dcomplex>(g.target_shape()); // a new array
 
       dcomplex z = 1.0;
-      for (int n : range(first_dim(tail))) {
+      for (int n : range(tail.extent(0))) {
         res += tail(n, ellipsis()) * z;
         z = z * x;
       }

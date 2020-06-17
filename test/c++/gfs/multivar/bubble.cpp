@@ -1,5 +1,6 @@
 //#define TRIQS_ARRAYS_ENFORCE_BOUNDCHECK
 #include <triqs/test_tools/gfs.hpp>
+#include <nda/clef/sum.hpp>
 
 using namespace triqs::clef;
 using namespace triqs::lattice;

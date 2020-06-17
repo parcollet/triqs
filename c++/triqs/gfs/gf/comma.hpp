@@ -82,7 +82,7 @@ namespace nda::clef {
 
   // The case A[x_,y_] = RHS : we form the function (make_function) and call auto_assign (by ADL)
   template <typename F, typename RHS, int... Is> FORCEINLINE void operator<<(expr<tags::subscript, F, triqs::gfs::tuple_com<_ph<Is>...>> &&ex, RHS &&rhs) {
-    triqs_clef_auto_assign(std::get<0>(ex.childs), make_function(std::forward<RHS>(rhs), _ph<Is>()...));
+    clef_auto_assign(std::get<0>(ex.childs), make_function(std::forward<RHS>(rhs), _ph<Is>()...));
   }
 
   // tuple_com can be evaluated

@@ -59,7 +59,7 @@ namespace triqs::mesh {
     };
 
     if constexpr (R > 1) {
-      return compute(arrays::zeros<dcomplex>(A.indexmap().lengths().front_pop()));
+      return compute(arrays::zeros<dcomplex>(stdutil::front_pop(A.indexmap().lengths())));
     } else {
       return compute(dcomplex{0});
     }

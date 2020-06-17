@@ -49,7 +49,8 @@ namespace triqs::gfs {
     using view_type = gf_view<Mesh, Target, Layout, EvalPolicy>;
 
     /// Associated regular type (gf<....>)
-    //using regular_type = gf<Mesh, Target, Layout, EvalPolicy>;
+    using regular_type = gf<Mesh, Target>; // FIXME : find the Layout
+//    using regular_type = gf<Mesh, Target, Layout, EvalPolicy>;
 
     /// The associated real type
     using real_t = gf_view<Mesh, typename Target::real_t, Layout, EvalPolicy>;

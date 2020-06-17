@@ -5,11 +5,10 @@ TEST(Gf, G_nu_nup) {
 
   double beta = 1;
 
-  auto G = gf<prod<imfreq, imfreq>, tensor_valued<4>>{
-     {{beta, Fermion, 100}, {beta, Fermion, 100}}, {2, 2, 2, 2}, make_memory_layout(0, 2, 3, 1, 4, 5)};
-
-  auto sh = triqs::arrays::memory_layout_t<6>{triqs::utility::mini_vector<int, 6>{0, 2, 3, 1, 4, 5}};
-  EXPECT_EQ(G.data().indexmap().memory_layout(), sh);
+  // FIXME : no sanitizer bug if regular order
+  //auto G = gf<prod<imfreq, imfreq>, tensor_valued<4>>{
+  auto G = gf<prod<imfreq, imfreq>, tensor_valued<4>, nda::basic_layout<0, nda::encode(std::array{0, 2, 3, 1, 4, 5}), layout_prop_e::contiguous>>{
+     {{beta, Fermion, 100}, {beta, Fermion, 100}}, {2, 2, 2, 2}};
 
   placeholder<0> nu_;
   placeholder<1> nup_;

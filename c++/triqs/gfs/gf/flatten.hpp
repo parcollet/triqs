@@ -13,12 +13,12 @@ namespace triqs::gfs {
 
     if (a.is_empty()) return array<T, 2>{};
     a.rebind(rotate_index_view<N>(a));    // Swap relevant dim to front. The view is passed by value, we modify it.
-    long nrows = first_dim(a);            // # rows of the result, i.e. n-th dim, which is now at 0.
+    long nrows = a.extent(0);            // # rows of the result, i.e. n-th dim, which is now at 0.
     long ncols = a.size() / nrows;        // # columns of the result. Everything but n-th dim.
-    array<T, 2> mat(first_dim(a), ncols); // result
+    array<T, 2> mat(nrows, ncols); // result
 
     auto a_0 = a(0, ellipsis()); 
-    for (long n : range(first_dim(a))) {
+    for (long n : range(nrows)) {
       if constexpr (R == 1)
         mat(n, 0) = a(n);
       else
