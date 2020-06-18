@@ -220,6 +220,9 @@ namespace triqs::mesh {
       auto const &imp      = g_data_swap_idx.indexmap();
       long ncols           = imp.size() / imp.lengths()[0];
 
+      //PRINT(g_data.shape());
+      //PRINT(g_data_swap_idx.shape());
+      
       // We flatten the data in the target space and remaining mesh into the second dim
       arrays::matrix<dcomplex> g_mat(_vander.extent(0), ncols);
 
@@ -228,8 +231,24 @@ namespace triqs::mesh {
         if constexpr (R == 1)
           g_mat(i, 0) = g_data_swap_idx(m.index_to_linear(n));
         else
-          for (auto [j, x] : enumerate(g_data_swap_idx(m.index_to_linear(n), ellipsis()))) g_mat(i, j) = x;
+          for (auto [j, x] : enumerate(g_data_swap_idx(m.index_to_linear(n), ellipsis()))) {
+            //PRINT(g_mat.shape());
+            //PRINT(i);PRINT(j);
+            //PRINT(g_data_swap_idx.shape());
+            //PRINT(g_data.shape());
+            //PRINT(g_mat(i, j));
+            //PRINT(m.index_to_linear(n));
+            //PRINT(x);
+            g_mat(i, j) = x;
+          }
       }
+      //PRINT(g_mat.shape());
+      //PRINT(g_mat(5, 56));
+      //PRINT(g_mat(range(), 0));
+      //PRINT(g_mat(range(), 56));
+      //PRINT(max_element(abs(g_mat)));
+
+     //PRINT (n_fixed_moments);
 
       // If an array with known_moments was passed, flatten the array into a matrix
       // just like g_data. Then account for the proper shift in g_mat
@@ -253,8 +272,17 @@ namespace triqs::mesh {
         }
 
         // Shift g_mat to account for known moment correction
-        g_mat -= _vander(range(), range(n_fixed_moments)) * km_mat;
+        g_mat -=  _vander(range(), range(n_fixed_moments)) * km_mat;
+      
+	//PRINT(km_mat);
+     // PRINT(km_mat.shape());
       }
+      //PRINT(max_element(abs(g_mat)));
+
+      //PRINT(g_mat.shape());
+      //PRINT(g_mat(range(), 0));
+      //PRINT(g_mat(range(), 56));
+
 
       // Call least square solver
       auto [a_mat, epsilon] = (*lss[n_fixed_moments])(g_mat, inner_matrix_dim); // coef + error
@@ -270,11 +298,14 @@ namespace triqs::mesh {
           z *= om_max;
         }
       }
-
+      //PRINT(a_mat.shape());
+      //PRINT(a_mat(range(), 0));
+      //PRINT(a_mat(range(), 56));
       // === Reinterpret the result as an R-dimensional array according to initial shape and return together with the error
 
       using r_t = arrays::array<dcomplex, R>; // return type
       auto lg   = g_data_swap_idx.indexmap().lengths();
+//      PRINT(lg);
 
       // Index map for the view on the a_mat result
       lg[0]     = n_moments - n_fixed_moments;
@@ -291,6 +322,8 @@ namespace triqs::mesh {
 
       return {std::move(res), epsilon};
     }
+
+    //--------------------
 
     template <int N, typename M, int R, int R2 = R>
     std::pair<arrays::array<dcomplex, R>, double> fit_hermitian(M const &m, array_const_view<dcomplex, R> g_data, bool normalize,

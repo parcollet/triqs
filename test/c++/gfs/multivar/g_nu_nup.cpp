@@ -8,10 +8,11 @@ TEST(Gf, G_nu_nup) {
   // FIXME : no sanitizer bug if regular order
   //auto G = gf<prod<imfreq, imfreq>, tensor_valued<4>>{
   auto G = gf<prod<imfreq, imfreq>, tensor_valued<4>, nda::basic_layout<0, nda::encode(std::array{0, 2, 3, 1, 4, 5}), layout_prop_e::contiguous>>{
-     {{beta, Fermion, 100}, {beta, Fermion, 100}}, {2, 2, 2, 2}};
+     {{beta, Fermion, 10}, {beta, Fermion, 10}}, {2, 2, 2, 2}};
 
   placeholder<0> nu_;
   placeholder<1> nup_;
+
 
   G(nu_, nup_) << 1 / (nu_ + nup_ + 1);
 
@@ -20,6 +21,7 @@ TEST(Gf, G_nu_nup) {
   EXPECT_CLOSE(res1, res);
   rw_h5(G, "ess_g_nu_nup.h5", "g");
 }
+//--------------------------------------------------------------------
 
 TEST(GfCartesian, H5_RW_Evaluator) {
   double beta = 1;
@@ -108,5 +110,4 @@ TEST(BlockGf, H5_RW_Evaluator) {
   EXPECT_ARRAY_NEAR(G[0](W10), G2[0](W10));
   EXPECT_ARRAY_NEAR(g(W10), g2(W10));
 }
-
 MAKE_MAIN;

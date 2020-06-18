@@ -9,10 +9,11 @@ namespace triqs::gfs {
    *
    * @return : a matrix, copy of the data
    * */
-  template <int N, typename T, int R> array<T, 2> flatten_2d(array_const_view<T, R> a) {
+  template <int N, typename T, int R> array<T, 2> flatten_2d(array_const_view<T, R> v) {
+    //static_assert(N==0, "ERROR");
 
-    if (a.is_empty()) return array<T, 2>{};
-    a.rebind(rotate_index_view<N>(a));    // Swap relevant dim to front. The view is passed by value, we modify it.
+    if (v.is_empty()) return array<T, 2>{};
+    auto a = rotate_index_view<N>(v);    // Swap relevant dim to front. The view is passed by value, we modify it.
     long nrows = a.extent(0);            // # rows of the result, i.e. n-th dim, which is now at 0.
     long ncols = a.size() / nrows;        // # columns of the result. Everything but n-th dim.
     array<T, 2> mat(nrows, ncols); // result

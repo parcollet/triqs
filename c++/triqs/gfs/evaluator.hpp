@@ -93,7 +93,7 @@ namespace triqs::gfs {
       static_assert(sizeof...(Args) == arity, "Wrong number of arguments in gf evaluation");
 
       using r1_t = decltype(evaluate(g, std::forward<Args>(args)...));
-
+ 
       if constexpr (is_gf_expr<r1_t>::value or is_gf_v<r1_t>) {
         return evaluate(g, std::forward<Args>(args)...);
       } else {

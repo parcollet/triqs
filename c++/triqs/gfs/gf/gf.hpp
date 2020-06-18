@@ -86,13 +86,13 @@ namespace triqs::gfs {
     static constexpr bool is_view  = false;
     static constexpr bool is_const = false;
 
-    using mutable_view_type = gf_view<Mesh, Target, Layout, EvalPolicy>;
+    using mutable_view_type = gf_view<Mesh, Target, typename Layout::with_lowest_guarantee_t, EvalPolicy>;
 
     /// Associated const view type
-    using const_view_type = gf_const_view<Mesh, Target, nda::C_stride_layout, EvalPolicy>;
+    using const_view_type = gf_const_view<Mesh, Target, typename Layout::with_lowest_guarantee_t, EvalPolicy>;
 
     /// Associated (non const) view type
-    using view_type = gf_view<Mesh, Target, nda::C_stride_layout, EvalPolicy>;
+    using view_type = gf_view<Mesh, Target, typename Layout::with_lowest_guarantee_t, EvalPolicy>;
 
     /// Associated regular type (gf<....>)
     using regular_type = gf<Mesh, Target, Layout, EvalPolicy>;
@@ -280,7 +280,7 @@ namespace triqs::gfs {
      *  @tparam G A type modeling :ref:`concept_GreenFunction`.
      *  @param g 
      */
-    template <typename G> gf(G const &g) REQUIRES(GreenFunction<G>::value) : gf() { *this = g; }
+    template <typename G> explicit gf(G const &g) REQUIRES(GreenFunction<G>::value) : gf() { *this = g; } // explicit is very important here.	
     // TODO: We would like to refine this, G should have the same mesh, target, at least ...
 
     /** 

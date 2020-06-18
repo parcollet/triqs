@@ -1,3 +1,7 @@
+
+// FIXME FACTORIZE
+#define NDA_DEBUG
+
 #include <triqs/test_tools/gfs.hpp>
 
 using namespace triqs::arrays;

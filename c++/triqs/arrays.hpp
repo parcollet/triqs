@@ -68,19 +68,23 @@ namespace triqs::arrays {
 
   using utility::mini_vector;
 
-  template <typename T>//[[deprecated]] 
-    nda::matrix<T> make_unit_matrix(int dim) { return nda::eye<T>(dim); }
+  template <typename T> //[[deprecated]]
+  nda::matrix<T> make_unit_matrix(int dim) {
+    return nda::eye<T>(dim);
+  }
 
   template <typename... T> //[[deprecated]]
-    std::array<long, sizeof...(T)> make_shape(T... x) { return {long(x)...}; }
+  std::array<long, sizeof...(T)> make_shape(T... x) {
+    return {long(x)...};
+  }
 } // namespace triqs::arrays
 
 namespace nda {
 
   // Rotate the index n to 0, preserving the relative order of the other indices
-  template <int N, typename A> //[[deprecated]] 
-    auto rotate_index_view(A &&a) {
-    return permuted_indices_view<encode(nda::permutations::cycle<get_rank<A>>(1, N))>(std::forward<A>(a));
+  template <int N, typename A> //[[deprecated]]
+  auto rotate_index_view(A &&a) {
+    return permuted_indices_view<encode(nda::permutations::cycle<get_rank<A>>(-1, N + 1))>(std::forward<A>(a));
   }
 
 } // namespace nda

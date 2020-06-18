@@ -49,8 +49,7 @@ namespace triqs::gfs {
     using view_type = gf_view<Mesh, Target, Layout, EvalPolicy>;
 
     /// Associated regular type (gf<....>)
-    using regular_type = gf<Mesh, Target>; // FIXME : find the Layout
-//    using regular_type = gf<Mesh, Target, Layout, EvalPolicy>;
+    using regular_type = gf<Mesh, Target, typename Layout::contiguous_t, EvalPolicy>;
 
     /// The associated real type
     using real_t = gf_view<Mesh, typename Target::real_t, Layout, EvalPolicy>;
@@ -162,7 +161,7 @@ namespace triqs::gfs {
     // -------------------------------- impl. details common to all classes -----------------------------------------------
 
     private:
-    template <typename G> gf_view(impl_tag2, G &&x) : _mesh(x.mesh()), _data(x.data()), _indices(x.indices()) {}
+    template <typename G> gf_view(impl_tag2, G &&x) : _mesh(x.mesh()), _data(x.data()), _indices(x.indices()) { nda::debug_print_type(x); }
 
     template <typename M, typename D>
     gf_view(impl_tag, M &&m, D &&dat, indices_t ind) : _mesh(std::forward<M>(m)), _data(std::forward<D>(dat)), _indices(std::move(ind)) {
@@ -194,13 +193,13 @@ namespace triqs::gfs {
     gf_view(gf_const_view<Mesh, Target> const &g) = delete;
 
     // NO DOC
-    gf_view(gf<Mesh, Target> const &g) = delete;
+    template <typename L> gf_view(gf<Mesh, Target, L> const &g) = delete;
 
     ///
-    gf_view(gf<Mesh, Target> &g) : gf_view(impl_tag2{}, g) {}
+    template <typename L> gf_view(gf<Mesh, Target, L> &g) : gf_view(impl_tag2{}, g) {}
 
     ///
-    gf_view(gf<Mesh, Target> &&g) noexcept : gf_view(impl_tag2{}, std::move(g)) {} // from a gf &&
+    template <typename L> gf_view(gf<Mesh, Target, L> &&g) noexcept : gf_view(impl_tag2{}, std::move(g)) {} // from a gf &&
 
     /**
        * Builds a view on top of a mesh, a data array
