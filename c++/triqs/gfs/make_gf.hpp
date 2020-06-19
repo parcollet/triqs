@@ -27,7 +27,7 @@ namespace triqs {
     template <typename Mesh, typename T> gf<Mesh, typename T::target_t> make_gf(Mesh m, T const &t) { return {std::move(m), t.shape()}; }
 
     // Create a Green function from another gf or view
-    template <typename G> typename std::decay_t<G>::regular_type make_gf(G &&g) { return {std::forward<G>(g)}; }
+    template <typename G> typename std::decay_t<G>::regular_type make_gf(G &&g) { return typename std::decay_t<G>::regular_type{std::forward<G>(g)}; }
 
   } // namespace gfs
 } // namespace triqs

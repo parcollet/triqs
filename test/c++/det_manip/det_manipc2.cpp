@@ -2,7 +2,8 @@
 #include <triqs/mc_tools/random_generator.hpp>
 #include <nda/linalg/det_and_inverse.hpp>
 
-#include <triqs/arrays/asserts.hpp>
+#include "./old_test_tool.hpp"
+
 #include <iostream>
 #include <triqs/std_addons/complex.hpp>
 

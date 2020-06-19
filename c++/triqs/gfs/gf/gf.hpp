@@ -267,12 +267,12 @@ namespace triqs::gfs {
     /**
      *  Makes a deep copy of the data
      */
-    gf(gf_view<Mesh, Target> const &g) : gf(impl_tag2{}, g) {}
+    explicit gf(gf_view<Mesh, Target> const &g) : gf(impl_tag2{}, g) {}
 
     /**
      *  Makes a deep copy of the data
      */
-    gf(gf_const_view<Mesh, Target> const &g) : gf(impl_tag2{}, g) {}
+    explicit gf(gf_const_view<Mesh, Target> const &g) : gf(impl_tag2{}, g) {}
 
     /** 
      *  From any object modeling the :ref:`concept_GreenFunction`.

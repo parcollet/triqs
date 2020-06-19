@@ -2,6 +2,7 @@
 #include <triqs/mc_tools/random_generator.hpp>
 #include <nda/linalg/det_and_inverse.hpp>
 #include <iostream>
+#include "./old_test_tool.hpp"
 
 struct fun {
 

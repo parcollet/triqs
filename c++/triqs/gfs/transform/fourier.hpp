@@ -125,20 +125,34 @@ namespace triqs::gfs {
 
     auto const &out_mesh = get_out_mesh(gout);
 
+  //PRINT(max_element(abs(gin.data())));
+  //PRINT(max_element(abs(flatten_gf_2d<N>(gin).data())));
+    
     auto gout_flatten = _fourier_impl(out_mesh, flatten_gf_2d<N>(gin), flatten_2d<0>(make_array_const_view(opt_args))...);
+//  PRINT(max_element(abs(gout_flatten.data())));
     auto _            = ellipsis();
     if constexpr (gin.data_rank == 1)
       gout.data() = gout_flatten.data()(_, 0); // gout is scalar, gout_flatten vectorial
     else {
       // inverse operation as flatten_2d, exactly
       auto g_rot = rotate_index_view<N>(gout.data());
-      auto a_0   = g_rot(0, _);
+ //PRINT(N);
+  //    PRINT(g_rot(3,1,0));
+      //auto a_0   = g_rot(0, _);
       for (auto const &mp : out_mesh) {
         auto g_rot_sl = g_rot(mp.linear_index(), _); // if the array is long, it is faster to precompute the view ...
         auto gout_col = gout_flatten.data()(mp.linear_index(), _);
-        assign_foreach(g_rot_sl, [&gout_col, c = 0ll](auto &&... i) mutable { return gout_col(c++); });
+//	PRINT(gout_col);
+  //PRINT(g_rot_sl.shape());
+	nda::for_each(g_rot_sl.shape(), [&g_rot_sl, &gout_col, c = long(0)](auto &&... i) mutable { return g_rot_sl(i...) = gout_col(c++); });
+//	PRINT(g_rot_sl);
       }
+ //V PRINT(max_element(abs(g_rot)));
+  //PRINT(g_rot.shape());
+  //PRINT(g_rot(3,1,0));
+
     }
+//  PRINT(max_element(abs(gout.data())));
   }
 
   /* *-----------------------------------------------------------------------------------------------------
